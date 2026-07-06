@@ -1,0 +1,410 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+@import url('https://maxst.icons8.com/vue-static/landings/line-awesome/line-awesome/1.3.0/css/line-awesome.min.css');
+
+:root {
+  --brand-pink: #E43292;
+  --brand-black: #000000;
+  --brand-white: #ffffff;
+  
+  --bg-color: #f7f7f7;
+  --card-bg: #ffffff;
+  
+  --text-main: #333333;
+  --text-muted: #888888;
+  --text-light: #cccccc;
+  
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 50px;
+  
+  --shadow-soft: 0 4px 15px rgba(0, 0, 0, 0.05);
+  --shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.1);
+  --shadow-nav: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 80px; /* Space for bottom nav */
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
+  margin: 0;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Utilities */
+.text-pink { color: var(--brand-pink); }
+.text-bold { font-weight: 700; }
+.text-black { color: var(--brand-black); }
+
+/* Layout constraints for Desktop/Laptop */
+.content-container {
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .content-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+}
+
+/* Layouts */
+.flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade {
+  animation: fadeIn 0.4s ease forwards;
+}
+
+/* Hide scrollbar for horizontal scrolls */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Responsive Hero Banner */
+.hero-banner-slide {
+  height: 220px;
+}
+.hero-banner-subtitle {
+  font-size: 11px;
+}
+.hero-banner-title {
+  font-size: 22px;
+}
+.hero-banner-discount {
+  font-size: 12px;
+}
+
+@media (min-width: 768px) {
+  .hero-banner-slide {
+    height: 300px;
+  }
+  .hero-banner-subtitle {
+    font-size: 14px;
+    margin-bottom: 6px !important;
+  }
+  .hero-banner-title {
+    font-size: 32px;
+    margin-bottom: 12px !important;
+  }
+  .hero-banner-discount {
+    font-size: 14px;
+    padding: 8px 16px !important;
+  }
+}
+
+/* Responsive Product Grid */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+@media (min-width: 768px) {
+  .product-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .product-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* Quick Categories Responsive */
+.quick-categories-wrapper {
+  padding: 0 15px;
+}
+.quick-categories-grid {
+  display: grid;
+  grid-template-rows: repeat(2, 1fr);
+  grid-auto-flow: column;
+  gap: 15px 18px;
+}
+
+@media (min-width: 768px) {
+  .quick-categories-wrapper {
+    padding: 0 20px;
+  }
+  .quick-categories-grid {
+    grid-template-rows: auto;
+    grid-template-columns: repeat(10, 1fr);
+    grid-auto-flow: row;
+    gap: 20px 10px;
+    justify-items: center;
+  }
+}
+
+/* Service Benefits Section */
+.service-benefits-wrapper {
+  display: flex;
+  overflow-x: auto;
+  gap: 12px;
+  padding-bottom: 15px;
+}
+.service-benefit-card {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 140px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+.service-benefit-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--brand-pink);
+  box-shadow: 0 4px 12px rgba(255, 79, 154, 0.15);
+}
+.service-benefit-icon {
+  font-size: 24px;
+  color: var(--brand-pink);
+  margin-bottom: 8px;
+}
+.service-benefit-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #000;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+.service-benefit-subtitle {
+  font-size: 10px;
+  color: #666;
+  line-height: 1.2;
+}
+
+/* Tablet & Small Laptops (2 rows of 4) */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .service-benefits-wrapper {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    overflow-x: visible;
+    gap: 15px;
+  }
+  .service-benefit-card {
+    min-width: auto;
+    padding: 12px;
+  }
+}
+
+/* Large Laptops & Desktops (1 unbroken line of 8) */
+@media (min-width: 1200px) {
+  .service-benefits-wrapper {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    overflow-x: visible;
+    gap: 10px;
+  }
+  .service-benefit-card {
+    min-width: auto;
+    padding: 10px;
+  }
+}
+
+/* Deal Highlights Responsive Layout */
+.deal-highlights-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+/* Mobile Ordering */
+.deal-order-1 { order: 1; }
+.deal-order-2 { order: 3; } /* Top Trends goes below Combo Deals */
+.deal-order-3 { order: 2; } /* Brand Zone goes next to Combo Deals */
+.deal-order-4 { order: 4; }
+
+@media (min-width: 768px) {
+  .deal-highlights-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+  }
+  
+  /* Desktop Utilities */
+  .hide-on-desktop {
+    display: none !important;
+  }
+  
+  /* Desktop Ordering: Standard order */
+  .deal-order-1 { order: 1; }
+  .deal-order-2 { order: 2; } /* Top Trends next to Combo Deals */
+  .deal-order-3 { order: 3; } /* Brand Zone next to Top Trends */
+  .deal-order-4 { order: 4; }
+}
+
+/* Mobile Utilities */
+@media (max-width: 768px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+  .search-row-mobile {
+    gap: 8px !important;
+  }
+  .search-container-mobile {
+    flex: 1 !important;
+    width: auto !important;
+    min-width: 0 !important;
+    order: 0;
+    margin: 0 !important;
+  }
+  .icons-container-mobile {
+    flex: none !important;
+    gap: 12px !important;
+    width: auto !important;
+  }
+}
+
+/* Three Column Layout for Desktop */
+.three-col-desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+@media (min-width: 1024px) {
+  .desktop-nav-py {
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+  }
+  
+  .three-col-desktop {
+    flex-direction: row;
+    gap: 20px;
+    align-items: stretch;
+    padding: 0 15px; /* Add padding to wrapper for desktop */
+  }
+  .three-col-desktop > div {
+    flex: 1;
+    min-width: 0; /* Prevents overflow */
+    padding: 0 !important; /* Override inline padding */
+    display: flex;
+    flex-direction: column;
+  }
+  .three-col-desktop > div > div {
+    flex: 1; /* Stretch inner white card */
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* Two Column Layout for Desktop */
+.two-col-desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+@media (min-width: 1024px) {
+  .two-col-desktop {
+    flex-direction: row;
+    gap: 20px;
+    align-items: stretch;
+    padding: 0 15px;
+  }
+  .two-col-desktop > div {
+    flex: 1;
+    min-width: 0;
+    padding: 0 !important;
+    display: flex;
+    flex-direction: column;
+  }
+  .two-col-desktop > div > div {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* Swipeable Layout CSS */
+.swipe-container {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  height: calc(100vh - 150px);
+}
+.swipe-page {
+  min-width: 100vw;
+  width: 100vw;
+  scroll-snap-align: start;
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overflow-anchor: none;
+}
+@media (min-width: 769px) { .hide-on-desktop { display: none !important; } }
+
+/* Review Grid Layout */
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (min-width: 1024px) {
+  .review-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
+  }
+}
+
+.product-card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.product-card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.12); z-index: 20; }
+
+@keyframes pulseLoading {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.floating-logo {
+  animation: pulseLoading 1.5s ease-in-out infinite;
+}
