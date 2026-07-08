@@ -41,6 +41,14 @@ const AddProduct = () => {
     };
   });
   const [productType, setProductType] = useState('domestic');
+  const [categories, setCategories] = useState({
+    "Electronics": ["Mobiles", "Laptops", "Audio", "Smartwatches", "Accessories"],
+    "Women Fashion": ["Dresses", "Tops", "Pants", "Shoes", "Bags", "Jewelry", "T-Shirts & Polos"],
+    "Men Fashion": ["T-Shirts", "Shirts", "Pants", "Shoes", "Watches", "Jackets"],
+    "Bags & Luggage": ["Backpacks", "Suitcases", "Handbags", "Wallets"],
+    "Beauty & Health": ["Makeup", "Skincare", "Haircare", "Personal Care"],
+    "Home & Decor": ["Furniture", "Lighting", "Bedding", "Kitchenware"]
+  });
   const fileInputRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -80,14 +88,6 @@ const AddProduct = () => {
     }
   }, [location.search]);
 
-  const categoryMap = {
-    "Electronics": ["Mobiles", "Laptops", "Audio", "Smartwatches", "Accessories"],
-    "Women Fashion": ["Dresses", "Tops", "Pants", "Shoes", "Bags", "Jewelry", "T-Shirts & Polos"],
-    "Men Fashion": ["T-Shirts", "Shirts", "Pants", "Shoes", "Watches", "Jackets"],
-    "Bags & Luggage": ["Backpacks", "Suitcases", "Handbags", "Wallets"],
-    "Beauty & Health": ["Makeup", "Skincare", "Haircare", "Personal Care"],
-    "Home & Decor": ["Furniture", "Lighting", "Bedding", "Kitchenware"]
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -1167,7 +1167,8 @@ const AddProduct = () => {
             <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '16px', fontWeight: 600 }}>Categories</h3>
             
             <div style={{ maxHeight: '350px', overflowY: 'auto', paddingRight: '8px', display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
-              {Object.entries(categoryMap).map(([cat, subcats]) => {
+              {Object.keys(categories).sort((a, b) => a.localeCompare(b)).map(cat => {
+                const subcats = [...(categories[cat] || [])].sort((a, b) => a.localeCompare(b));
                 const currentCats = Array.isArray(formData.category) ? formData.category : (formData.category ? formData.category.split(', ') : []);
                 const isCatChecked = currentCats.includes(cat);
                 
@@ -1189,36 +1190,60 @@ const AddProduct = () => {
                     </label>
                     
                     {/* Subcategories (Indented) */}
-                    {subcats && subcats.length > 0 && (
-                      <div style={{ paddingLeft: '26px', marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {subcats.map(sub => {
-                          const currentSubcats = Array.isArray(formData.subcategory) ? formData.subcategory : (formData.subcategory ? formData.subcategory.split(', ') : []);
-                          const isSubChecked = currentSubcats.includes(sub);
-                          return (
-                            <label key={sub} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', color: '#64748b', cursor: 'pointer' }}>
-                              <input 
-                                type="checkbox" 
-                                checked={isSubChecked}
-                                onChange={(e) => {
-                                  const newSubcats = e.target.checked 
-                                    ? [...currentSubcats, sub]
-                                    : currentSubcats.filter(s => s !== sub);
-                                  setFormData(prev => ({ ...prev, subcategory: newSubcats }));
-                                }}
-                                style={{ width: '14px', height: '14px', borderRadius: '3px', cursor: 'pointer', accentColor: '#3b82f6' }}
-                              />
-                              {sub}
-                            </label>
-                          );
-                        })}
-                      </div>
-                    )}
+                    <div style={{ paddingLeft: '26px', marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {subcats.length > 0 && subcats.map(sub => {
+                        const currentSubcats = Array.isArray(formData.subcategory) ? formData.subcategory : (formData.subcategory ? formData.subcategory.split(', ') : []);
+                        const isSubChecked = currentSubcats.includes(sub);
+                        return (
+                          <label key={sub} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', color: '#64748b', cursor: 'pointer' }}>
+                            <input 
+                              type="checkbox" 
+                              checked={isSubChecked}
+                              onChange={(e) => {
+                                const newSubcats = e.target.checked 
+                                  ? [...currentSubcats, sub]
+                                  : currentSubcats.filter(s => s !== sub);
+                                setFormData(prev => ({ ...prev, subcategory: newSubcats }));
+                              }}
+                              style={{ width: '14px', height: '14px', borderRadius: '3px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                            />
+                            {sub}
+                          </label>
+                        );
+                      })}
+                      
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          const newSub = window.prompt(`Enter new subcategory for ${cat}:`);
+                          if (newSub && newSub.trim() && !categories[cat].includes(newSub.trim())) {
+                            setCategories(prev => ({ ...prev, [cat]: [...prev[cat], newSub.trim()] }));
+                          }
+                        }}
+                        style={{ color: '#3b82f6', background: 'none', border: 'none', padding: 0, fontSize: '12.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}
+                        onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'} 
+                        onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}
+                      >
+                        + Add Subcategory
+                      </button>
+                    </div>
                   </div>
                 );
               })}
               
               <div style={{ marginTop: '4px', paddingTop: '12px' }}>
-                <button type="button" style={{ color: '#3b82f6', background: 'none', border: 'none', padding: 0, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }} onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'} onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    const newCat = window.prompt("Enter new category name:");
+                    if (newCat && newCat.trim() && !categories[newCat.trim()]) {
+                      setCategories(prev => ({ ...prev, [newCat.trim()]: [] }));
+                    }
+                  }}
+                  style={{ color: '#3b82f6', background: 'none', border: 'none', padding: 0, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }} 
+                  onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'} 
+                  onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}
+                >
                   + Create Category
                 </button>
               </div>
