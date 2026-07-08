@@ -30,7 +30,7 @@ const TabPage = ({ tabLabel }) => {
     if (dailyDiscoverCache[tabLabel]) {
       setProducts(dailyDiscoverCache[tabLabel]);
     } else {
-      const newProducts = generateProducts(tabLabel === 'All Products' ? 'recommended' : tabLabel, 50);
+      const newProducts = generateProducts(tabLabel === 'All Products' ? 'recommended' : tabLabel, 48);
       dailyDiscoverCache[tabLabel] = newProducts;
       setProducts(newProducts);
     }
@@ -43,7 +43,7 @@ const TabPage = ({ tabLabel }) => {
           setLoading(true);
           setTimeout(() => {
             setProducts(prev => {
-              const moreProducts = generateProducts(tabLabel === 'All Products' ? 'recommended' : tabLabel, 10);
+              const moreProducts = generateProducts(tabLabel === 'All Products' ? 'recommended' : tabLabel, 24);
               const updatedProducts = [...prev, ...moreProducts];
               dailyDiscoverCache[tabLabel] = updatedProducts;
               return updatedProducts;
