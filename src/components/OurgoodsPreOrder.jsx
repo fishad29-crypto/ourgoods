@@ -7,9 +7,10 @@ const OurgoodsPreOrder = () => {
   const navigate = useNavigate();
   const scrollRef = useRef(null);
   
-  // Get Global / Pre-Order products
+  // Get Global / Pre-Order products and randomize on refresh
   const preOrderProducts = getAllProducts()
     .filter(p => p.type === 'global' || p.type === 'China Pre-Order' || p.product_type === 'Global Product')
+    .sort(() => 0.5 - Math.random())
     .slice(0, 10);
 
   // Fallback to random products if none match the exact type

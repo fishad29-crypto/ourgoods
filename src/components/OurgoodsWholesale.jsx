@@ -7,9 +7,10 @@ const OurgoodsWholesale = () => {
   const navigate = useNavigate();
   const scrollRef = useRef(null);
   
-  // Get Factory / Wholesale products
+  // Get Factory / Wholesale products and randomize on refresh
   const wholesaleProducts = getAllProducts()
     .filter(p => p.type === 'factory' || p.product_type === 'Factory Direct')
+    .sort(() => 0.5 - Math.random())
     .slice(0, 10);
 
   // Fallback to random if none match the exact type

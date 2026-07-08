@@ -23,10 +23,10 @@ const FlashSale = ({ category }) => {
 
   const allProducts = getAllProducts();
   
-  // Filter for highly discounted items to simulate flash sale
+  // Filter for highly discounted items and shuffle to randomize on refresh
   const flashSaleProducts = allProducts
     .filter(p => p.discount >= 20 || p.isFlashSale)
-    .sort((a, b) => b.discount - a.discount)
+    .sort(() => 0.5 - Math.random())
     .slice(0, 10);
 
   const displayProducts = category 
