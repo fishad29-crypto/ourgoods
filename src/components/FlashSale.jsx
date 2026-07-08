@@ -87,7 +87,7 @@ const FlashSale = ({ category }) => {
   const formatTime = (time) => time.toString().padStart(2, '0');
 
   return (
-    <div style={{ padding: '0 15px', marginBottom: '15px' }}>
+    <div style={{ padding: '0 15px', marginBottom: isMobile ? '8px' : '15px' }}>
       <div style={{
         background: '#fff',
         border: '1px solid #eaeaea',
@@ -102,7 +102,7 @@ const FlashSale = ({ category }) => {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        padding: '12px 15px',
+        padding: isMobile ? '8px 12px' : '12px 15px',
         background: 'linear-gradient(90deg, var(--brand-pink), #ff4a9e)',
         borderTopLeftRadius: '8px',
         borderTopRightRadius: '8px'
@@ -113,7 +113,7 @@ const FlashSale = ({ category }) => {
             {/* Flash Icon & Title */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <i className="las la-bolt" style={{ color: '#fff', fontSize: '24px' }}></i>
-              <span style={{ fontWeight: 900, fontSize: '16px', color: '#fff', letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>Flash Sale</span>
+              <span style={{ fontWeight: 900, fontSize: isMobile ? '14px' : '16px', color: '#fff', letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>Flash Sale</span>
             </div>
           </div>
 
@@ -155,12 +155,12 @@ const FlashSale = ({ category }) => {
           <i className="las la-angle-right"></i>
         </div>
 
-        <div ref={scrollRef} className="no-scrollbar" style={{ display: 'flex', gap: '10px', overflowX: 'hidden', padding: '15px', scrollBehavior: 'smooth' }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        <div ref={scrollRef} className="no-scrollbar" style={{ display: 'flex', gap: '10px', overflowX: 'hidden', padding: isMobile ? '10px' : '15px', scrollBehavior: 'smooth' }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
           {displayProducts.slice(currentIndex, currentIndex + 3).map((product) => (
           <div key={product.id} style={{ minWidth: isMobile ? 'calc(33.33% - 7px)' : '110px', width: isMobile ? 'calc(33.33% - 7px)' : '110px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
             
             {/* Image Box */}
-            <div style={{ position: 'relative', width: '100%', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', background: '#f5f5f5', marginBottom: '8px' }}>
+            <div style={{ position: 'relative', width: '100%', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', background: '#f5f5f5', marginBottom: isMobile ? '4px' : '8px' }}>
               <img src={product.image || product.images?.[0]} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               
               {/* Discount Badge */}
@@ -175,12 +175,12 @@ const FlashSale = ({ category }) => {
             </div>
 
             {/* Title */}
-            <div style={{ fontSize: '11px', fontWeight: 600, color: '#333', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: '#333', marginBottom: isMobile ? '2px' : '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {product.title}
             </div>
 
             {/* Prices */}
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '2px' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: isMobile ? '0' : '2px' }}>
               <span style={{ color: 'var(--brand-pink)', fontWeight: 900, fontSize: '14px' }}>৳{Number(product.price).toLocaleString()}</span>
               {product.originalPrice > product.price && (
                 <span style={{ color: '#999', fontSize: '10px', textDecoration: 'line-through' }}>৳{Number(product.originalPrice).toLocaleString()}</span>

@@ -57,7 +57,7 @@ const OurgoodsPreOrder = () => {
   };
 
   return (
-    <div style={{ padding: '0 15px', marginBottom: '15px' }}>
+    <div style={{ padding: '0 15px', marginBottom: isMobile ? '8px' : '15px' }}>
       <div style={{
         background: '#fff',
         border: '1px solid #eaeaea',
@@ -72,7 +72,7 @@ const OurgoodsPreOrder = () => {
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
-          padding: '12px 15px',
+          padding: isMobile ? '8px 12px' : '12px 15px',
           background: 'linear-gradient(90deg, var(--brand-pink), #ff4a9e)', // Premium brand background
           borderTopLeftRadius: '8px',
           borderTopRightRadius: '8px'
@@ -82,7 +82,7 @@ const OurgoodsPreOrder = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <i className="las la-globe" style={{ color: '#fff', fontSize: '24px' }}></i>
-                <span style={{ fontWeight: 900, fontSize: '16px', color: '#fff', letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>Global Shop</span>
+                <span style={{ fontWeight: 900, fontSize: isMobile ? '14px' : '16px', color: '#fff', letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>Global Shop</span>
               </div>
             </div>
             
@@ -108,12 +108,12 @@ const OurgoodsPreOrder = () => {
             <i className="las la-angle-right"></i>
           </div>
           
-          <div ref={scrollRef} className="no-scrollbar" style={{ display: 'flex', gap: '10px', overflowX: 'hidden', padding: '15px', scrollBehavior: 'smooth' }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+          <div ref={scrollRef} className="no-scrollbar" style={{ display: 'flex', gap: '10px', overflowX: 'hidden', padding: isMobile ? '10px' : '15px', scrollBehavior: 'smooth' }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
             {preOrderProducts.slice(currentIndex, currentIndex + 3).map((product) => (
             <div key={product.id} style={{ minWidth: isMobile ? 'calc(33.33% - 7px)' : '110px', width: isMobile ? 'calc(33.33% - 7px)' : '110px', flexShrink: 0, display: 'flex', flexDirection: 'column', cursor: 'pointer' }} onClick={() => navigate(`/product/${product.id}`)}>
               
               {/* Image Box */}
-              <div style={{ position: 'relative', width: '100%', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', background: '#f5f5f5', marginBottom: '8px', border: '1px solid #eaeaea' }}>
+              <div style={{ position: 'relative', width: '100%', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', background: '#f5f5f5', marginBottom: isMobile ? '4px' : '8px', border: '1px solid #eaeaea' }}>
                 <img src={product.image} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 
                 {/* Plus Button */}
@@ -137,12 +137,12 @@ const OurgoodsPreOrder = () => {
               </div>
 
               {/* Title */}
-              <div style={{ fontSize: '11px', fontWeight: 600, color: '#333', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: '#333', marginBottom: isMobile ? '2px' : '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {product.title}
               </div>
 
               {/* Prices */}
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '2px' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: isMobile ? '0' : '2px' }}>
                 <span style={{ color: 'var(--brand-pink)', fontWeight: 900, fontSize: '15px' }}>৳{Number(product.price).toLocaleString()}</span>
                 {product.originalPrice > product.price && (
                   <span style={{ color: '#999', fontSize: '10px', textDecoration: 'line-through' }}>৳{Number(product.originalPrice).toLocaleString()}</span>
