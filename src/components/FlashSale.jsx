@@ -80,7 +80,7 @@ const FlashSale = ({ category }) => {
         justifyContent: 'space-between', 
         alignItems: 'center', 
         padding: '12px 15px',
-        background: '#111',
+        background: 'linear-gradient(90deg, var(--brand-pink), #ff4a9e)',
         borderTopLeftRadius: '8px',
         borderTopRightRadius: '8px'
       }}>
@@ -96,19 +96,19 @@ const FlashSale = ({ category }) => {
 
           {/* Countdown Timer */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', paddingLeft: '30px', marginTop: '2px' }}>
-            <span style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '10px', fontWeight: 600, marginRight: '2px' }}>Ends in</span>
+            <span style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '10px', fontWeight: 600, marginRight: '2px' }}>Ends in</span>
             
-            <div style={{ background: '#222', border: 'none', color: 'var(--brand-pink)', borderRadius: '4px', padding: '1px 4px', fontSize: '10px', fontWeight: 800 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', borderRadius: '4px', padding: '1px 4px', fontSize: '10px', fontWeight: 800 }}>
               {formatTime(timeLeft.hours)}
             </div>
-            <span style={{ color: 'var(--brand-pink)', fontSize: '10px', fontWeight: 900 }}>:</span>
+            <span style={{ color: '#fff', fontSize: '10px', fontWeight: 900 }}>:</span>
             
-            <div style={{ background: '#222', border: 'none', color: 'var(--brand-pink)', borderRadius: '4px', padding: '1px 4px', fontSize: '10px', fontWeight: 800 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', borderRadius: '4px', padding: '1px 4px', fontSize: '10px', fontWeight: 800 }}>
               {formatTime(timeLeft.minutes)}
             </div>
-            <span style={{ color: 'var(--brand-pink)', fontSize: '10px', fontWeight: 900 }}>:</span>
+            <span style={{ color: '#fff', fontSize: '10px', fontWeight: 900 }}>:</span>
             
-            <div style={{ background: '#222', border: 'none', color: 'var(--brand-pink)', borderRadius: '4px', padding: '1px 4px', fontSize: '10px', fontWeight: 800 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', borderRadius: '4px', padding: '1px 4px', fontSize: '10px', fontWeight: 800 }}>
               {formatTime(timeLeft.seconds)}
             </div>
           </div>
@@ -117,7 +117,7 @@ const FlashSale = ({ category }) => {
         {/* View All */}
         <div 
           onClick={() => saveScrollAndNavigate(navigate, '/market/flash-sale')}
-          style={{ color: 'var(--brand-pink)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', flexShrink: 0 }}
+          style={{ color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', flexShrink: 0 }}
         >
           View All <i className="las la-angle-right" style={{ fontSize: '14px' }}></i>
         </div>

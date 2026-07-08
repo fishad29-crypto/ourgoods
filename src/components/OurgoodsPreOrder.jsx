@@ -50,7 +50,7 @@ const OurgoodsPreOrder = () => {
           justifyContent: 'space-between', 
           alignItems: 'center', 
           padding: '12px 15px',
-          background: '#111', // Premium dark background
+          background: 'linear-gradient(90deg, var(--brand-pink), #ff4a9e)', // Premium brand background
           borderTopLeftRadius: '8px',
           borderTopRightRadius: '8px'
         }}>
@@ -64,14 +64,14 @@ const OurgoodsPreOrder = () => {
             </div>
             
             {/* Delivery text */}
-            <div style={{ paddingLeft: '28px', fontSize: '9px', letterSpacing: '-0.2px', whiteSpace: 'nowrap', color: 'rgba(255, 255, 255, 0.7)', marginTop: '2px', fontWeight: 600 }}>
+            <div style={{ paddingLeft: '28px', fontSize: '9px', letterSpacing: '-0.2px', whiteSpace: 'nowrap', color: 'rgba(255, 255, 255, 0.9)', marginTop: '2px', fontWeight: 600 }}>
               Standard: 21-28 Days • Express: 4-7 Days
             </div>
           </div>
 
           <div 
             onClick={() => saveScrollAndNavigate(navigate, '/ourgoods-pre-order')}
-            style={{ color: 'var(--brand-pink)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            style={{ color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', flexShrink: 0 }}>
             View All <i className="las la-angle-right" style={{ fontSize: '14px' }}></i>
           </div>
         </div>
