@@ -1,45 +1,21 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { saveScrollAndNavigate } from '../utils/navigation';
-
-const wholesaleProducts = [
-  {
-    id: 301,
-    image: 'https://images.unsplash.com/photo-1595225476474-87563907a212?auto=format&fit=crop&q=90&w=600',
-    title: 'Mechanical Keyboard (Bulk)',
-    price: '৳3,500',
-    originalPrice: '৳4,500',
-    sold: '1.5k Sold'
-  },
-  {
-    id: 302,
-    image: 'https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&q=90&w=600',
-    title: 'Scented Soy Candle (x50)',
-    price: '৳400',
-    originalPrice: '৳600',
-    sold: '4.2k Sold'
-  },
-  {
-    id: 303,
-    image: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=90&w=600',
-    title: 'Aesthetic Desk Lamp (Box)',
-    price: '৳1,200',
-    originalPrice: '৳1,800',
-    sold: '2.1k Sold'
-  },
-  {
-    id: 304,
-    image: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?auto=format&fit=crop&q=90&w=600',
-    title: 'Water Bottle (x100)',
-    price: '৳500',
-    originalPrice: '৳750',
-    sold: '6.7k Sold'
-  }
-];
+import { getAllProducts } from '../utils/MockData';
 
 const OurgoodsWholesale = () => {
   const navigate = useNavigate();
   const scrollRef = useRef(null);
+  
+  // Get Factory / Wholesale products
+  const wholesaleProducts = getAllProducts()
+    .filter(p => p.type === 'factory' || p.product_type === 'Factory Direct')
+    .slice(0, 10);
+
+  // Fallback to random if none match the exact type
+  if (wholesaleProducts.length === 0) {
+    wholesaleProducts.push(...getAllProducts().sort(() => 0.5 - Math.random()).slice(0, 8));
+  }
 
   const scrollLeft = () => {
     if (scrollRef.current) scrollRef.current.scrollBy({ left: -200, behavior: 'smooth' });
@@ -135,13 +111,15 @@ const OurgoodsWholesale = () => {
 
               {/* Prices */}
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '2px' }}>
-                <span style={{ color: 'var(--brand-pink)', fontWeight: 900, fontSize: '15px' }}>{product.price}</span>
-                <span style={{ color: '#999', fontSize: '10px', textDecoration: 'line-through' }}>{product.originalPrice}</span>
+                <span style={{ color: 'var(--brand-pink)', fontWeight: 900, fontSize: '15px' }}>৳{Number(product.price).toLocaleString()}</span>
+                {product.originalPrice > product.price && (
+                  <span style={{ color: '#999', fontSize: '10px', textDecoration: 'line-through' }}>৳{Number(product.originalPrice).toLocaleString()}</span>
+                )}
               </div>
 
               {/* Sold Count */}
               <div style={{ color: '#888', fontSize: '10px', fontWeight: 500 }}>
-                {product.sold}
+                {product.soldCount > 1000 ? (product.soldCount / 1000).toFixed(1) + 'k' : product.soldCount} Sold
               </div>
 
             </div>

@@ -2,92 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { saveScrollAndNavigate } from '../utils/navigation';
 
-const flashSaleProducts = [
-  {
-    id: 1,
-    image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=90&w=400',
-    discount: '-45%',
-    price: '৳599',
-    originalPrice: '৳1,099',
-    sold: '2.3k Sold',
-    categories: ['Women', 'All']
-  },
-  {
-    id: 2,
-    image: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&q=90&w=400',
-    discount: '-40%',
-    price: '৳899',
-    originalPrice: '৳1,499',
-    sold: '1.7k Sold',
-    categories: ['Women', 'All']
-  },
-  {
-    id: 3,
-    image: 'https://images.unsplash.com/photo-1584916201218-f4242ceb4809?auto=format&fit=crop&q=90&w=400',
-    discount: '-35%',
-    price: '৳1,299',
-    originalPrice: '৳1,999',
-    sold: '3.1k Sold',
-    categories: ['Women', 'Purse & Bags', 'All']
-  },
-  {
-    id: 4,
-    image: 'https://images.unsplash.com/photo-1622445272461-c6580cab8755?auto=format&fit=crop&q=90&w=400',
-    discount: '-30%',
-    price: '৳499',
-    originalPrice: '৳799',
-    sold: '1.2k Sold'
-  },
-  {
-    id: 5,
-    image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=90&w=400',
-    discount: '-50%',
-    price: '৳299',
-    originalPrice: '৳599',
-    sold: '4.5k Sold'
-  },
-  {
-    id: 6,
-    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=90&w=400',
-    discount: '-25%',
-    price: '৳1,599',
-    originalPrice: '৳2,100',
-    sold: '900 Sold'
-  },
-  {
-    id: 7,
-    image: 'https://images.unsplash.com/photo-1599643478524-fb66f4568e71?auto=format&fit=crop&q=90&w=400',
-    discount: '-60%',
-    price: '৳399',
-    originalPrice: '৳999',
-    sold: '5.2k Sold'
-  },
-  {
-    id: 8,
-    image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=90&w=400',
-    discount: '-20%',
-    price: '৳2,499',
-    originalPrice: '৳3,100',
-    sold: '450 Sold'
-  },
-  {
-    id: 9,
-    image: 'https://images.unsplash.com/photo-1615397323226-0e3f05c08d2f?auto=format&fit=crop&q=90&w=400',
-    discount: '-70%',
-    price: '৳199',
-    originalPrice: '৳699',
-    sold: '8.1k Sold'
-  },
-  {
-    id: 10,
-    image: 'https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&q=90&w=400',
-    discount: '-15%',
-    price: '৳3,299',
-    originalPrice: '৳3,899',
-    sold: '230 Sold',
-    categories: ['All']
-  }
-];
+import { getAllProducts } from '../utils/MockData';
 
 const FlashSale = ({ category }) => {
   const navigate = useNavigate();
@@ -106,8 +21,16 @@ const FlashSale = ({ category }) => {
   };
 
 
+  const allProducts = getAllProducts();
+  
+  // Filter for highly discounted items to simulate flash sale
+  const flashSaleProducts = allProducts
+    .filter(p => p.discount >= 20 || p.isFlashSale)
+    .sort((a, b) => b.discount - a.discount)
+    .slice(0, 10);
+
   const displayProducts = category 
-    ? flashSaleProducts.filter(p => p.categories && p.categories.includes(category))
+    ? flashSaleProducts.filter(p => p.category === category)
     : flashSaleProducts;
 
   useEffect(() => {
@@ -213,11 +136,11 @@ const FlashSale = ({ category }) => {
             
             {/* Image Box */}
             <div style={{ position: 'relative', width: '100%', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', background: '#f5f5f5', marginBottom: '8px' }}>
-              <img src={product.image} alt="Flash Sale Item" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={product.image || product.images?.[0]} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               
               {/* Discount Badge */}
               <div style={{ position: 'absolute', top: '0', left: '0', background: 'var(--brand-pink)', color: '#fff', fontSize: '10px', fontWeight: 900, padding: '3px 6px', borderBottomRightRadius: '8px' }}>
-                {product.discount}
+                -{product.discount || 0}%
               </div>
               
               {/* Heart Icon */}
@@ -228,13 +151,15 @@ const FlashSale = ({ category }) => {
 
             {/* Prices */}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '2px' }}>
-              <span style={{ color: 'var(--brand-pink)', fontWeight: 900, fontSize: '14px' }}>{product.price}</span>
-              <span style={{ color: '#999', fontSize: '10px', textDecoration: 'line-through' }}>{product.originalPrice}</span>
+              <span style={{ color: 'var(--brand-pink)', fontWeight: 900, fontSize: '14px' }}>৳{Number(product.price).toLocaleString()}</span>
+              {product.originalPrice > product.price && (
+                <span style={{ color: '#999', fontSize: '10px', textDecoration: 'line-through' }}>৳{Number(product.originalPrice).toLocaleString()}</span>
+              )}
             </div>
 
             {/* Sold Count */}
             <div style={{ color: '#888', fontSize: '10px', fontWeight: 500 }}>
-              {product.sold}
+              {product.soldCount > 1000 ? (product.soldCount / 1000).toFixed(1) + 'k' : product.soldCount} Sold
             </div>
 
           </div>

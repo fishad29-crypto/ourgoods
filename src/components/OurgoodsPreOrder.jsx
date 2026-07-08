@@ -1,45 +1,21 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { saveScrollAndNavigate } from '../utils/navigation';
-
-const preOrderProducts = [
-  {
-    id: 201,
-    image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&q=90&w=600',
-    title: 'Running Shoes',
-    price: '৳4,200',
-    originalPrice: '৳5,500',
-    sold: '230 Sold'
-  },
-  {
-    id: 202,
-    image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&q=90&w=600',
-    title: 'Minimalist Backpack',
-    price: '৳1,200',
-    originalPrice: '৳1,800',
-    sold: '3.4k Sold'
-  },
-  {
-    id: 203,
-    image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&q=90&w=600',
-    title: 'Classic Leather Wallet',
-    price: '৳950',
-    originalPrice: '৳1,400',
-    sold: '5.1k Sold'
-  },
-  {
-    id: 204,
-    image: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&q=90&w=600',
-    title: 'Portable Charger 10k',
-    price: '৳1,500',
-    originalPrice: '৳2,200',
-    sold: '9.2k Sold'
-  }
-];
+import { getAllProducts } from '../utils/MockData';
 
 const OurgoodsPreOrder = () => {
   const navigate = useNavigate();
   const scrollRef = useRef(null);
+  
+  // Get Global / Pre-Order products
+  const preOrderProducts = getAllProducts()
+    .filter(p => p.type === 'global' || p.type === 'China Pre-Order' || p.product_type === 'Global Product')
+    .slice(0, 10);
+
+  // Fallback to random products if none match the exact type
+  if (preOrderProducts.length === 0) {
+    preOrderProducts.push(...getAllProducts().sort(() => 0.5 - Math.random()).slice(0, 8));
+  }
 
   const scrollLeft = () => {
     if (scrollRef.current) scrollRef.current.scrollBy({ left: -200, behavior: 'smooth' });
@@ -135,13 +111,15 @@ const OurgoodsPreOrder = () => {
 
               {/* Prices */}
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '2px' }}>
-                <span style={{ color: 'var(--brand-pink)', fontWeight: 900, fontSize: '15px' }}>{product.price}</span>
-                <span style={{ color: '#999', fontSize: '10px', textDecoration: 'line-through' }}>{product.originalPrice}</span>
+                <span style={{ color: 'var(--brand-pink)', fontWeight: 900, fontSize: '15px' }}>৳{Number(product.price).toLocaleString()}</span>
+                {product.originalPrice > product.price && (
+                  <span style={{ color: '#999', fontSize: '10px', textDecoration: 'line-through' }}>৳{Number(product.originalPrice).toLocaleString()}</span>
+                )}
               </div>
 
               {/* Sold Count */}
               <div style={{ color: '#888', fontSize: '10px', fontWeight: 500 }}>
-                {product.sold}
+                {product.soldCount > 1000 ? (product.soldCount / 1000).toFixed(1) + 'k' : product.soldCount} Sold
               </div>
 
             </div>
