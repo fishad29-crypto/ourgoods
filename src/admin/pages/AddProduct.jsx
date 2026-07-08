@@ -1184,7 +1184,7 @@ const AddProduct = () => {
                             : currentCats.filter(c => c !== cat);
                           setFormData(prev => ({ ...prev, category: newCats }));
                         }}
-                        style={{ width: '16px', height: '16px', borderRadius: '4px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                        style={{ width: '16px', height: '16px', borderRadius: '4px', cursor: 'pointer', accentColor: 'var(--brand-pink)' }}
                       />
                       {cat}
                     </label>
@@ -1205,7 +1205,7 @@ const AddProduct = () => {
                                   : currentSubcats.filter(s => s !== sub);
                                 setFormData(prev => ({ ...prev, subcategory: newSubcats }));
                               }}
-                              style={{ width: '14px', height: '14px', borderRadius: '3px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                              style={{ width: '14px', height: '14px', borderRadius: '3px', cursor: 'pointer', accentColor: 'var(--brand-pink)' }}
                             />
                             {sub}
                           </label>
@@ -1220,7 +1220,7 @@ const AddProduct = () => {
                             setCategories(prev => ({ ...prev, [cat]: [...prev[cat], newSub.trim()] }));
                           }
                         }}
-                        style={{ color: '#3b82f6', background: 'none', border: 'none', padding: 0, fontSize: '12.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}
+                        style={{ color: 'var(--brand-pink)', background: 'none', border: 'none', padding: 0, fontSize: '12.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}
                         onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'} 
                         onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}
                       >
@@ -1240,7 +1240,7 @@ const AddProduct = () => {
                       setCategories(prev => ({ ...prev, [newCat.trim()]: [] }));
                     }
                   }}
-                  style={{ color: '#3b82f6', background: 'none', border: 'none', padding: 0, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }} 
+                  style={{ color: 'var(--brand-pink)', background: 'none', border: 'none', padding: 0, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }} 
                   onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'} 
                   onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}
                 >
