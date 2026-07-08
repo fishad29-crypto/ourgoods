@@ -1201,26 +1201,6 @@ const AddProduct = () => {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <button 
-                          type="button"
-                          onClick={() => {
-                            if (window.confirm(`Delete category "${cat}"?`)) {
-                              const newCats = { ...categories };
-                              delete newCats[cat];
-                              setCategories(newCats);
-                              setFormData(prev => ({
-                                ...prev,
-                                category: (Array.isArray(prev.category) ? prev.category : prev.category?.split(', ') || []).filter(c => c !== cat)
-                              }));
-                            }
-                          }}
-                          style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
-                          onMouseOver={e => e.currentTarget.style.color = '#ef4444'}
-                          onMouseOut={e => e.currentTarget.style.color = '#cbd5e1'}
-                          title="Delete Category"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                        <button 
                           type="button" 
                           onClick={(e) => { e.preventDefault(); setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] })); }}
                           style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#64748b' }}
@@ -1262,42 +1242,9 @@ const AddProduct = () => {
                               />
                               {sub}
                             </label>
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                if (window.confirm(`Delete subcategory "${sub}"?`)) {
-                                  setCategories(prev => ({ ...prev, [cat]: prev[cat].filter(s => s !== sub) }));
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    subcategory: (Array.isArray(prev.subcategory) ? prev.subcategory : prev.subcategory?.split(', ') || []).filter(s => s !== sub)
-                                  }));
-                                }
-                              }}
-                              style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
-                              onMouseOver={e => e.currentTarget.style.color = '#ef4444'}
-                              onMouseOut={e => e.currentTarget.style.color = '#cbd5e1'}
-                              title="Delete Subcategory"
-                            >
-                              <Trash2 size={12} />
-                            </button>
                           </div>
                         );
                       })}
-                      
-                      <button 
-                        type="button" 
-                        onClick={() => {
-                          const newSub = window.prompt(`Enter new subcategory for ${cat}:`);
-                          if (newSub && newSub.trim() && !categories[cat].includes(newSub.trim())) {
-                            setCategories(prev => ({ ...prev, [cat]: [...prev[cat], newSub.trim()] }));
-                          }
-                        }}
-                        style={{ color: 'var(--brand-pink)', background: 'none', border: 'none', padding: 0, fontSize: '12.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}
-                        onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'} 
-                        onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}
-                      >
-                        + Add Subcategory
-                      </button>
                     </div>
                     )}
                   </div>
@@ -1310,10 +1257,7 @@ const AddProduct = () => {
               <button 
                 type="button" 
                 onClick={() => {
-                  const newCat = window.prompt("Enter new category name:");
-                  if (newCat && newCat.trim() && !categories[newCat.trim()]) {
-                    setCategories(prev => ({ ...prev, [newCat.trim()]: [] }));
-                  }
+                  navigate('/admin/categories');
                 }}
                 style={{ color: 'var(--brand-pink)', background: 'none', border: 'none', padding: 0, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }} 
                 onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'} 
