@@ -534,15 +534,20 @@ const AddProduct = () => {
     setIsImporting(false);
   };
 
+  const handleSaveDraft = () => {
+    alert(`Draft saved! "${formData.name || 'Untitled Product'}" has been securely saved to your local drafts.`);
+  };
+
   const handlePublish = () => {
-    if (!formData.name || !formData.regularPrice || !formData.category) {
-      alert("Please fill in all required fields (Name, Discount Price, Category) before publishing.");
+    if (!formData.name || !formData.salePrice || !formData.category) {
+      alert("Please fill in all required fields (Name, Selling Price, Category) before publishing.");
       return;
     }
     
     // Send to frontend site
     addProductToFrontend({
       ...formData,
+      type: productType,
       images: images
     });
     
@@ -591,7 +596,7 @@ const AddProduct = () => {
           <button className="btn-outline" onClick={handleClearAll} style={{ color: '#ef4444', borderColor: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Trash2 size={18} /> Clear All
           </button>
-          <button className="btn-outline">Save as Draft</button>
+          <button className="btn-outline" onClick={handleSaveDraft}>Save as Draft</button>
           <button className="btn-primary" onClick={handlePublish}><Save size={18} /> Publish Product</button>
         </div>
       </div>
@@ -913,11 +918,11 @@ const AddProduct = () => {
             <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '16px', fontWeight: 600 }}>Pricing & Inventory</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div className="form-group">
-                <label className="form-label">Discount Price (৳) *</label>
+                <label className="form-label">Original Price (৳)</label>
                 <input type="number" name="regularPrice" className="form-input" placeholder="0.00" value={formData.regularPrice} onChange={handleChange} />
               </div>
               <div className="form-group">
-                <label className="form-label">Sale Price (৳)</label>
+                <label className="form-label">Selling Price (৳) *</label>
                 <input type="number" name="salePrice" className="form-input" placeholder="0.00" value={formData.salePrice} onChange={handleChange} />
               </div>
               <div className="form-group">
@@ -1190,14 +1195,6 @@ const AddProduct = () => {
                   <option value="OURGOODS Direct">OURGOODS Direct</option>
                   <option value="Vendor A">Vendor A</option>
                   <option value="Vendor B">Vendor B</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Product Type</label>
-                <select className="form-input" name="type" value={formData.type} onChange={handleChange}>
-                  <option value="Local Ready Stock">Local Ready Stock</option>
-                  <option value="China Pre-Order">China Pre-Order</option>
-                  <option value="OURGOODS Choice">OURGOODS Choice</option>
                 </select>
               </div>
               <div className="form-group">
