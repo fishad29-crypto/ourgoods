@@ -747,17 +747,7 @@ const AddProduct = () => {
                     >
                       <X size={14} strokeWidth={2.5} />
                     </button>
-                    <div style={{ position: 'absolute', bottom: '8px', left: '8px', right: '8px', display: 'flex', justifyContent: 'center' }}>
-                      {img.isExisting ? (
-                        <div style={{ background: 'rgba(15, 23, 42, 0.75)', color: '#10b981', fontSize: '9px', fontWeight: 600, padding: '4px 8px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px', backdropFilter: 'blur(4px)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                          <Sparkles size={10} /> Optimized
-                        </div>
-                      ) : (
-                        <div style={{ background: 'rgba(15, 23, 42, 0.75)', color: '#fff', fontSize: '9px', fontWeight: 600, padding: '4px 8px', borderRadius: '12px', backdropFilter: 'blur(4px)', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
-                          {formatSize(img.compressedSize)}
-                        </div>
-                      )}
-                    </div>
+
                   </div>
                 ))}
               </div>
