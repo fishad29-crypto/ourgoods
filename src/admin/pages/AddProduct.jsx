@@ -675,7 +675,7 @@ const AddProduct = () => {
           </div>
 
           {/* General Information */}
-          <div className="form-section" style={{ backgroundColor: 'var(--admin-surface)', padding: '24px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
+          <div className="form-section" style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
             
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '24px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -731,7 +731,7 @@ const AddProduct = () => {
                 </div>
                 <textarea 
                   name="description"
-                  style={{ width: '100%', border: 'none', padding: '16px', resize: 'vertical', outline: 'none', fontSize: '14px', minHeight: '120px', backgroundColor: '#fff' }}
+                  style={{ width: '100%', border: 'none', padding: '16px', resize: 'vertical', outline: 'none', fontSize: '14px', minHeight: '140px', backgroundColor: '#fff', fontFamily: '"Courier New", Courier, monospace', color: '#475569' }}
                   placeholder="Compact scrub brush with a smooth wooden handle..."
                   value={formData.description}
                   onChange={handleChange}
@@ -739,10 +739,10 @@ const AddProduct = () => {
               </div>
             </div>
             
-            <hr style={{ border: 'none', borderTop: '1px solid var(--admin-border)', margin: '24px -24px 24px -24px' }} />
+            <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '32px -24px 24px -24px' }} />
 
             <div>
-              <h4 style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 600, letterSpacing: '1px', color: '#475569', textTransform: 'uppercase' }}>Additional Info Sections</h4>
+              <h4 style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 700, letterSpacing: '0.05em', color: '#1e293b', textTransform: 'uppercase' }}>Additional Info Sections</h4>
               <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#64748b' }}>Share information like return policy or care instructions with your customers.</p>
               
               {(formData.infoSections || []).map((section, idx) => (

@@ -35,20 +35,12 @@ const ProductsCatalog = () => {
     <div className="admin-content">
       <div className="page-header">
         <h2 className="page-title">Products & Catalog ({realProducts.length})</h2>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ position: 'relative' }}>
-            <button className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }} onClick={(e) => {
-              const menu = e.currentTarget.nextElementSibling;
-              menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-            }}>
-              More actions <i className="las la-angle-down" style={{ fontSize: '12px' }}></i>
-            </button>
-            <div className="dropdown-menu" style={{ display: 'none', position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: '#fff', border: '1px solid var(--admin-border)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10, minWidth: '150px', padding: '8px 0' }}>
-              <div style={{ padding: '8px 16px', fontSize: '14px', cursor: 'pointer', color: '#333' }} onClick={() => setShowBulkModal(true)} onMouseEnter={e => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>Bulk Upload</div>
-              <div style={{ padding: '8px 16px', fontSize: '14px', cursor: 'pointer', color: '#333' }} onMouseEnter={e => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>Export Products</div>
-              <div style={{ padding: '8px 16px', fontSize: '14px', cursor: 'pointer', color: '#333' }} onMouseEnter={e => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>Manage Inventory</div>
-            </div>
-          </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button className="btn-outline" onClick={() => setShowBulkModal(true)}>Bulk Upload</button>
+          
+          <button className="btn-primary" onClick={() => navigate('/admin/products/add')}>
+            <Plus size={18} /> Add Product
+          </button>
         </div>
       </div>
 
