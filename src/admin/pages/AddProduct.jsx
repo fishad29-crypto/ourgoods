@@ -1189,13 +1189,6 @@ const AddProduct = () => {
                   <div key={cat}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <button 
-                          type="button" 
-                          onClick={(e) => { e.preventDefault(); setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] })); }}
-                          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#64748b' }}
-                        >
-                          {expandedCats[cat] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                        </button>
                         <span 
                           onClick={(e) => { e.preventDefault(); setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] })); }}
                           style={{ fontSize: '14px', color: '#334155', cursor: 'pointer', fontWeight: isCatChecked ? 600 : 400, userSelect: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -1206,26 +1199,35 @@ const AddProduct = () => {
                           {cat}
                         </span>
                       </div>
-                      <button 
-                        type="button"
-                        onClick={() => {
-                          if (window.confirm(`Delete category "${cat}"?`)) {
-                            const newCats = { ...categories };
-                            delete newCats[cat];
-                            setCategories(newCats);
-                            setFormData(prev => ({
-                              ...prev,
-                              category: (Array.isArray(prev.category) ? prev.category : prev.category?.split(', ') || []).filter(c => c !== cat)
-                            }));
-                          }
-                        }}
-                        style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
-                        onMouseOver={e => e.currentTarget.style.color = '#ef4444'}
-                        onMouseOut={e => e.currentTarget.style.color = '#cbd5e1'}
-                        title="Delete Category"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`Delete category "${cat}"?`)) {
+                              const newCats = { ...categories };
+                              delete newCats[cat];
+                              setCategories(newCats);
+                              setFormData(prev => ({
+                                ...prev,
+                                category: (Array.isArray(prev.category) ? prev.category : prev.category?.split(', ') || []).filter(c => c !== cat)
+                              }));
+                            }
+                          }}
+                          style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                          onMouseOver={e => e.currentTarget.style.color = '#ef4444'}
+                          onMouseOut={e => e.currentTarget.style.color = '#cbd5e1'}
+                          title="Delete Category"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={(e) => { e.preventDefault(); setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] })); }}
+                          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#64748b' }}
+                        >
+                          {expandedCats[cat] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                        </button>
+                      </div>
                     </div>
                     
                     {/* Subcategories (Indented & Collapsible) */}
