@@ -5,6 +5,7 @@ import imageCompression from 'browser-image-compression';
 import Tesseract from 'tesseract.js';
 import MediaManagerModal from '../../components/MediaManagerModal';
 import { addProductToFrontend } from '../../utils/MockData';
+import { categorySubcategories } from '../../components/CategorySubcategories';
 import realProducts from '../../utils/realProducts.json';
 import '../admin.css';
 
@@ -41,7 +42,13 @@ const AddProduct = () => {
     };
   });
   const [productType, setProductType] = useState('domestic');
-  const [categories, setCategories] = useState({});
+  const [categories, setCategories] = useState(() => {
+    const initialCategories = {};
+    for (const cat in categorySubcategories) {
+      initialCategories[cat] = categorySubcategories[cat].map(sub => sub.name);
+    }
+    return initialCategories;
+  });
   const fileInputRef = React.useRef(null);
 
   React.useEffect(() => {
