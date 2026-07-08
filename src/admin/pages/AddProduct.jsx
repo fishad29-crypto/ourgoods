@@ -781,11 +781,13 @@ const AddProduct = () => {
           </div>
 
           {/* General Information */}
+          {/* General Information */}
           <div className="form-section" style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '15px', fontWeight: 600, color: '#1e293b' }}>General Information</h3>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '24px' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Name</label>
+                <label className="form-label" style={{ fontSize: '13px', color: '#475569', marginBottom: '8px' }}>Product Name</label>
                 <input 
                   type="text" 
                   name="name"
@@ -793,18 +795,19 @@ const AddProduct = () => {
                   placeholder="e.g. Wooden Handle Scrub Brush" 
                   value={formData.name}
                   onChange={handleChange}
+                  style={{ padding: '12px 16px', borderRadius: '8px' }}
                 />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  Ribbon <Info size={14} color="#888" />
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#475569', marginBottom: '8px' }}>
+                  Ribbon <Info size={14} color="#94a3b8" />
                 </label>
                 <select 
                   name="ribbon"
                   className="form-input" 
                   value={formData.ribbon || ''}
                   onChange={handleChange}
-                  style={{ cursor: 'pointer', appearance: 'none', background: '#fff url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E") no-repeat right .75rem top 50%', backgroundSize: "12px auto", paddingRight: "30px" }}
+                  style={{ padding: '12px 16px', borderRadius: '8px', cursor: 'pointer', appearance: 'none', background: '#fff url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E") no-repeat right 1rem top 50%', backgroundSize: "10px auto", paddingRight: "32px" }}
                 >
                   <option value="">None</option>
                   <option value="New Arrival">New Arrival</option>
@@ -820,69 +823,73 @@ const AddProduct = () => {
 
             <div className="form-group" style={{ marginBottom: '32px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <label className="form-label" style={{ margin: 0 }}>Description</label>
+                <label className="form-label" style={{ margin: 0, fontSize: '13px', color: '#475569' }}>Description</label>
                 <button 
                   type="button"
                   onClick={handleAutoFill}
                   disabled={isGenerating}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: '#3b82f6', fontWeight: 500, cursor: 'pointer', padding: 0 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#fff0f6', border: '1px solid #fbcfe8', color: 'var(--brand-pink)', fontWeight: 600, fontSize: '12px', padding: '6px 12px', borderRadius: '16px', cursor: 'pointer', transition: 'all 0.2s' }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = 'var(--brand-pink)'; e.currentTarget.style.color = '#fff'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = '#fff0f6'; e.currentTarget.style.color = 'var(--brand-pink)'; }}
                 >
-                  <Sparkles size={16} /> {isGenerating ? 'Generating...' : 'Generate AI Text'}
+                  <Sparkles size={14} /> {isGenerating ? 'Generating...' : 'Generate AI Text'}
                 </button>
               </div>
               
-              <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#fff' }}>
-                <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb', gap: '20px', color: '#4b5563' }}>
-                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', display: 'flex' }}><Bold size={18} strokeWidth={2.5} /></button>
-                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', display: 'flex' }}><Italic size={18} strokeWidth={2.5} /></button>
-                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', display: 'flex' }}><Underline size={18} strokeWidth={2.5} /></button>
-                  <div style={{ width: '1px', height: '24px', backgroundColor: '#e5e7eb', margin: '0 -4px' }}></div>
-                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', display: 'flex' }}><AlignLeft size={18} strokeWidth={2.5} /></button>
-                  <div style={{ width: '1px', height: '24px', backgroundColor: '#e5e7eb', margin: '0 -4px' }}></div>
-                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', display: 'flex' }}><Link size={18} strokeWidth={2.5} /></button>
-                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', display: 'flex' }}><List size={18} strokeWidth={2.5} /></button>
-                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', display: 'flex' }}><ListOrdered size={18} strokeWidth={2.5} /></button>
+              <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#fff', transition: 'border-color 0.2s' }}>
+                <div style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', borderBottom: '1px solid #f1f5f9', gap: '16px', color: '#64748b', backgroundColor: '#f8fafc' }}>
+                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'inherit', display: 'flex', borderRadius: '4px' }} onMouseOver={e => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={e => e.currentTarget.style.background = 'none'}><Bold size={16} strokeWidth={2.5} /></button>
+                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'inherit', display: 'flex', borderRadius: '4px' }} onMouseOver={e => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={e => e.currentTarget.style.background = 'none'}><Italic size={16} strokeWidth={2.5} /></button>
+                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'inherit', display: 'flex', borderRadius: '4px' }} onMouseOver={e => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={e => e.currentTarget.style.background = 'none'}><Underline size={16} strokeWidth={2.5} /></button>
+                  <div style={{ width: '1px', height: '20px', backgroundColor: '#e2e8f0' }}></div>
+                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'inherit', display: 'flex', borderRadius: '4px' }} onMouseOver={e => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={e => e.currentTarget.style.background = 'none'}><AlignLeft size={16} strokeWidth={2.5} /></button>
+                  <div style={{ width: '1px', height: '20px', backgroundColor: '#e2e8f0' }}></div>
+                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'inherit', display: 'flex', borderRadius: '4px' }} onMouseOver={e => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={e => e.currentTarget.style.background = 'none'}><Link size={16} strokeWidth={2.5} /></button>
+                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'inherit', display: 'flex', borderRadius: '4px' }} onMouseOver={e => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={e => e.currentTarget.style.background = 'none'}><List size={16} strokeWidth={2.5} /></button>
+                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'inherit', display: 'flex', borderRadius: '4px' }} onMouseOver={e => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={e => e.currentTarget.style.background = 'none'}><ListOrdered size={16} strokeWidth={2.5} /></button>
                 </div>
                 <textarea 
                   name="description"
-                  style={{ width: '100%', border: 'none', padding: '16px', resize: 'vertical', outline: 'none', fontSize: '14px', minHeight: '140px', backgroundColor: '#fff', fontFamily: '"Courier New", Courier, monospace', color: '#475569' }}
-                  placeholder="Compact scrub brush with a smooth wooden handle..."
+                  style={{ width: '100%', border: 'none', padding: '16px', resize: 'vertical', outline: 'none', fontSize: '14px', minHeight: '140px', backgroundColor: '#fff', color: '#334155', lineHeight: '1.5' }}
+                  placeholder="Describe your product here..."
                   value={formData.description}
                   onChange={handleChange}
                 ></textarea>
               </div>
             </div>
             
-            <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '32px -24px 24px -24px' }} />
+            <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: '32px -24px 24px -24px' }} />
 
             <div>
-              <h4 style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 700, letterSpacing: '0.05em', color: '#1e293b', textTransform: 'uppercase' }}>Additional Info Sections</h4>
-              <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#64748b' }}>Share information like return policy or care instructions with your customers.</p>
+              <h4 style={{ margin: '0 0 6px', fontSize: '14px', fontWeight: 600, color: '#1e293b' }}>Additional Information</h4>
+              <p style={{ margin: '0 0 20px', fontSize: '13px', color: '#64748b' }}>Share return policies, care instructions, or specifications.</p>
               
               {(formData.infoSections || []).map((section, idx) => (
-                <div key={idx} style={{ border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '16px', marginBottom: '16px', backgroundColor: '#fff' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <div key={idx} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', marginBottom: '16px', backgroundColor: '#f8fafc', position: 'relative' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                     <input 
                       type="text" 
                       className="form-input" 
-                      style={{ width: '50%', fontWeight: 600, margin: 0, padding: '8px 12px' }} 
-                      placeholder="Info Section Title" 
+                      style={{ width: '60%', fontWeight: 600, margin: 0, padding: '10px 14px', borderRadius: '6px', backgroundColor: '#fff' }} 
+                      placeholder="e.g. Return Policy" 
                       value={section.title} 
                       onChange={(e) => handleInfoSectionChange(idx, 'title', e.target.value)} 
                     />
                     <button 
                       type="button" 
                       onClick={() => handleRemoveInfoSection(idx)} 
-                      style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                      style={{ color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '8px', borderRadius: '4px', transition: 'all 0.2s' }}
+                      onMouseOver={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fee2e2'; }}
+                      onMouseOut={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'none'; }}
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={16} />
                     </button>
                   </div>
                   <textarea 
                     className="form-input" 
                     rows="3" 
-                    style={{ margin: 0 }}
-                    placeholder="Enter info section details..." 
+                    style={{ margin: 0, padding: '12px 14px', borderRadius: '6px', backgroundColor: '#fff', fontSize: '13px' }}
+                    placeholder="Enter the details here..." 
                     value={section.content} 
                     onChange={(e) => handleInfoSectionChange(idx, 'content', e.target.value)}
                   ></textarea>
@@ -892,9 +899,11 @@ const AddProduct = () => {
               <button 
                 type="button"
                 onClick={handleAddInfoSection}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: '#3b82f6', fontWeight: 500, cursor: 'pointer', padding: 0 }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: 'var(--brand-pink)', fontWeight: 600, fontSize: '13px', cursor: 'pointer', padding: '8px 0', transition: 'opacity 0.2s' }}
+                onMouseOver={e => e.currentTarget.style.opacity = '0.8'}
+                onMouseOut={e => e.currentTarget.style.opacity = '1'}
               >
-                <Plus size={16} /> Add an Info Section
+                <Plus size={16} strokeWidth={3} /> Add Information Block
               </button>
             </div>
           </div>
