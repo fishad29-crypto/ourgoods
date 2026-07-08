@@ -849,9 +849,8 @@ const AddProduct = () => {
           {/* Variants */}
           {/* Variants */}
           <div className="form-section" style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div style={{ marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Variants / Attributes</h3>
-              <button className="btn-outline" onClick={handleAddAttribute} style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}><Plus size={14} /> Add Variant</button>
             </div>
             
             {(formData.attributes || []).map((attr, idx) => (
@@ -935,10 +934,19 @@ const AddProduct = () => {
               </div>
             ))}
             {(!formData.attributes || formData.attributes.length === 0) && (
-              <div style={{ textAlign: 'center', padding: '20px', color: '#64748b', fontSize: '14px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+              <div style={{ textAlign: 'center', padding: '20px', color: '#64748b', fontSize: '14px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1', marginBottom: '16px' }}>
                 No variants added. Click "Add Variant" to allow buyers to select options.
               </div>
             )}
+            
+            <button 
+              type="button" 
+              className="btn-outline" 
+              onClick={handleAddAttribute} 
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: formData.attributes && formData.attributes.length > 0 ? '8px' : '0' }}
+            >
+              <Plus size={16} /> Add Variant
+            </button>
           </div>
 
         </div>
