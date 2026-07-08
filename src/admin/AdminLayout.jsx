@@ -79,9 +79,10 @@ const AdminLayout = () => {
   const [hasUnread, setHasUnread] = useState(true);
   const [openDropdowns, setOpenDropdowns] = useState({});
   const navigate = useNavigate();
+  const location = window.location; // Use global window.location since useLocation might not be imported
 
-  const toggleDropdown = (label) => {
-    setOpenDropdowns(prev => ({ ...prev, [label]: !prev[label] }));
+  const toggleDropdown = (label, isCurrentlyOpen) => {
+    setOpenDropdowns(prev => ({ ...prev, [label]: !isCurrentlyOpen }));
   };
 
   const isAuthenticated = localStorage.getItem('adminAuth') === 'true';
@@ -127,21 +128,23 @@ const AdminLayout = () => {
               <h4 className="sidebar-group-title">{group.title}</h4>
               {group.links.map((link) => {
                 if (link.subLinks) {
-                  const isAnySubActive = link.subLinks.some(sub => location.pathname === `/admin/${sub.path}`);
+                  const isAnySubActive = link.subLinks.some(sub => location.pathname === `/admin/${sub.path}` || location.pathname === `/admin/${sub.path}/`);
+                  const isOpen = openDropdowns[link.label] ?? isAnySubActive;
+                  
                   return (
                     <div key={link.label} className="sidebar-dropdown">
                       <div 
-                        className={`sidebar-item ${(openDropdowns[link.label] || isAnySubActive) ? 'active' : ''}`} 
-                        onClick={() => toggleDropdown(link.label)}
+                        className={`sidebar-item ${isOpen || isAnySubActive ? 'active' : ''}`} 
+                        onClick={() => toggleDropdown(link.label, isOpen)}
                         style={{ display: 'flex', justifyContent: 'space-between', cursor: 'pointer', paddingRight: '12px' }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <link.icon />
                           <span>{link.label}</span>
                         </div>
-                        <ChevronDown size={16} style={{ transform: openDropdowns[link.label] || isAnySubActive ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                        <ChevronDown size={16} style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                       </div>
-                      {(openDropdowns[link.label] || isAnySubActive) && (
+                      {isOpen && (
                         <div style={{ paddingLeft: '44px', display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', marginBottom: '8px' }}>
                           {link.subLinks.map(sub => (
                             <NavLink 
