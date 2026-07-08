@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getAllProducts } from '../utils/MockData';
 import ProductCard from './ProductCard';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import './ProductDetailsPage.css';
 
 const bdMaleNames = ['Anisur Rahman', 'Mehedi Hasan', 'Rahim Uddin', 'Tarek Biswas', 'Hasan Mahmud', 'Kamrul Islam', 'Riyad Hossain', 'Shakil Ahmed', 'Imran Hossain', 'Rubel Mia', 'Arif Rahman', 'Rakib Hasan', 'Sabbir Rahman', 'Ashiq Mahmud', 'Faisal Karim'];
@@ -197,6 +198,7 @@ const ProductDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart, cartCount } = useCart();
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const [product, setProduct] = useState(null);
   const [showToast, setShowToast] = useState(false);
   const [viewingCount, setViewingCount] = useState(0);
