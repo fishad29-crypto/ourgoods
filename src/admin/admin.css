@@ -35,12 +35,12 @@
 }
 
 [data-theme='dark'] {
-  --admin-bg: #0f172a;
-  --admin-surface: #1e293b;
-  --admin-border: #334155;
-  --admin-text-main: #f8fafc;
-  --admin-text-muted: #94a3b8;
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+  --admin-bg: #000000;
+  --admin-surface: #111111;
+  --admin-border: #333333;
+  --admin-text-main: #ffffff;
+  --admin-text-muted: #a0a0a0;
+  --shadow-md: 0 4px 12px rgba(228, 50, 146, 0.1);
   --status-success-bg: rgba(16, 185, 129, 0.15);
   --status-warning-bg: rgba(245, 158, 11, 0.15);
   --status-danger-bg: rgba(239, 68, 68, 0.15);
