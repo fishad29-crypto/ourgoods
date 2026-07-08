@@ -49,10 +49,6 @@ const ProductsCatalog = () => {
               <div style={{ padding: '8px 16px', fontSize: '14px', cursor: 'pointer', color: '#333' }} onMouseEnter={e => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>Manage Inventory</div>
             </div>
           </div>
-          
-          <button className="btn-primary" onClick={() => navigate('/admin/products/add')} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Plus size={18} /> Add Product
-          </button>
         </div>
       </div>
 

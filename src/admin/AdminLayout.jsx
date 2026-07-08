@@ -27,7 +27,14 @@ const sidebarGroups = [
   {
     title: 'Catalog',
     links: [
-      { path: 'products', icon: Package, label: 'Products & Catalog' },
+      { 
+        icon: Package, 
+        label: 'Products & Catalog',
+        subLinks: [
+          { path: 'products', label: 'All Products' },
+          { path: 'products/add', label: 'Add Product' }
+        ]
+      },
       { path: 'categories', icon: LayoutDashboard, label: 'Categories' },
       { path: 'ourgoods-direct', icon: Store, label: 'OURGOODS Direct' },
       { path: 'inventory', icon: Box, label: 'Inventory' }
@@ -70,7 +77,12 @@ const AdminLayout = () => {
   const [isMaintenance, setIsMaintenance] = useState(localStorage.getItem('siteMaintenance') === 'true');
   const [showNotifications, setShowNotifications] = useState(false);
   const [hasUnread, setHasUnread] = useState(true);
+  const [openDropdowns, setOpenDropdowns] = useState({});
   const navigate = useNavigate();
+
+  const toggleDropdown = (label) => {
+    setOpenDropdowns(prev => ({ ...prev, [label]: !prev[label] }));
+  };
 
   const isAuthenticated = localStorage.getItem('adminAuth') === 'true';
 
@@ -113,17 +125,60 @@ const AdminLayout = () => {
           {sidebarGroups.map((group, groupIdx) => (
             <div key={groupIdx} className="sidebar-group">
               <h4 className="sidebar-group-title">{group.title}</h4>
-              {group.links.map((link) => (
-                <NavLink 
-                  key={link.path}
-                  to={`/admin${link.path ? '/' + link.path : ''}`}
-                  end={link.path === ''}
-                  className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
-                >
-                  <link.icon />
-                  <span>{link.label}</span>
-                </NavLink>
-              ))}
+              {group.links.map((link) => {
+                if (link.subLinks) {
+                  const isAnySubActive = link.subLinks.some(sub => location.pathname === `/admin/${sub.path}`);
+                  return (
+                    <div key={link.label} className="sidebar-dropdown">
+                      <div 
+                        className={`sidebar-item ${(openDropdowns[link.label] || isAnySubActive) ? 'active' : ''}`} 
+                        onClick={() => toggleDropdown(link.label)}
+                        style={{ display: 'flex', justifyContent: 'space-between', cursor: 'pointer', paddingRight: '12px' }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <link.icon />
+                          <span>{link.label}</span>
+                        </div>
+                        <ChevronDown size={16} style={{ transform: openDropdowns[link.label] || isAnySubActive ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                      </div>
+                      {(openDropdowns[link.label] || isAnySubActive) && (
+                        <div style={{ paddingLeft: '44px', display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', marginBottom: '8px' }}>
+                          {link.subLinks.map(sub => (
+                            <NavLink 
+                              key={sub.path}
+                              to={`/admin/${sub.path}`}
+                              end={sub.path === 'products'}
+                              className={({ isActive }) => `sidebar-subitem ${isActive ? 'active' : ''}`}
+                              style={({ isActive }) => ({
+                                color: isActive ? 'var(--brand-pink)' : 'inherit',
+                                textDecoration: 'none',
+                                fontSize: '13px',
+                                padding: '8px 0',
+                                opacity: isActive ? 1 : 0.7,
+                                fontWeight: isActive ? '600' : 'normal',
+                                display: 'block'
+                              })}
+                            >
+                              {sub.label}
+                            </NavLink>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                return (
+                  <NavLink 
+                    key={link.path}
+                    to={`/admin${link.path ? '/' + link.path : ''}`}
+                    end={link.path === ''}
+                    className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
+                  >
+                    <link.icon />
+                    <span>{link.label}</span>
+                  </NavLink>
+                );
+              })}
             </div>
           ))}
         </nav>
