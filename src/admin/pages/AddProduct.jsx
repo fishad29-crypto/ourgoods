@@ -483,7 +483,7 @@ const AddProduct = () => {
 
   const handlePublish = () => {
     if (!formData.name || !formData.regularPrice || !formData.category) {
-      alert("Please fill in all required fields (Name, Regular Price, Category) before publishing.");
+      alert("Please fill in all required fields (Name, Discount Price, Category) before publishing.");
       return;
     }
     
@@ -790,7 +790,7 @@ const AddProduct = () => {
             <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '16px', fontWeight: 600 }}>Pricing & Inventory</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div className="form-group">
-                <label className="form-label">Regular Price (৳) *</label>
+                <label className="form-label">Discount Price (৳) *</label>
                 <input type="number" name="regularPrice" className="form-input" placeholder="0.00" value={formData.regularPrice} onChange={handleChange} />
               </div>
               <div className="form-group">
