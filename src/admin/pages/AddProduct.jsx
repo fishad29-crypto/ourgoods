@@ -1272,23 +1272,33 @@ const AddProduct = () => {
           <div className="form-section" style={{ backgroundColor: 'var(--admin-surface)', padding: '24px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
             <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '16px', fontWeight: 600 }}>Special Placements</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {['Flash Sale', 'Global Shop', 'Factory Direct'].map(placement => {
+              {[
+                { name: 'Flash Sale', icon: 'las la-bolt' },
+                { name: 'Global Shop', icon: 'las la-globe' },
+                { name: 'Factory Direct', icon: 'las la-industry' },
+                { name: 'Combo Offers', icon: 'las la-box' },
+                { name: 'Ourgoods Choice', icon: 'las la-star' },
+                { name: 'Cash Deals', icon: 'las la-money-bill-wave' },
+                { name: '9 Tk Deals', icon: 'las la-tags' },
+                { name: '0.99 Store', icon: 'las la-store' }
+              ].map(placement => {
                 const currentPlacements = Array.isArray(formData.placements) ? formData.placements : (formData.placements ? formData.placements.split(', ') : []);
-                const isChecked = currentPlacements.includes(placement);
+                const isChecked = currentPlacements.includes(placement.name);
                 return (
-                  <label key={placement} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#334155', cursor: 'pointer' }}>
+                  <label key={placement.name} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#334155', cursor: 'pointer' }}>
                     <input 
                       type="checkbox"
                       checked={isChecked}
                       onChange={(e) => {
                         const newPlacements = e.target.checked
-                          ? [...currentPlacements, placement]
-                          : currentPlacements.filter(p => p !== placement);
+                          ? [...currentPlacements, placement.name]
+                          : currentPlacements.filter(p => p !== placement.name);
                         setFormData(prev => ({ ...prev, placements: newPlacements }));
                       }}
                       style={{ width: '16px', height: '16px', borderRadius: '4px', cursor: 'pointer', accentColor: 'var(--brand-pink)' }}
                     />
-                    {placement}
+                    <i className={placement.icon} style={{ fontSize: '18px', color: 'var(--brand-pink)' }}></i>
+                    {placement.name}
                   </label>
                 );
               })}
