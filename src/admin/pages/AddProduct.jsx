@@ -602,73 +602,75 @@ const AddProduct = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* Product Type Selection */}
-          <div className="form-section" style={{ backgroundColor: 'var(--admin-surface)', padding: '24px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 600 }}>Select Product Type</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+          <div className="form-section" style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 600, color: '#1e293b' }}>Product Type</h3>
+            <div style={{ display: 'flex', gap: '12px' }}>
               
               <div 
                 onClick={() => setProductType('domestic')}
                 style={{ 
-                  padding: '16px', 
-                  border: productType === 'domestic' ? '2px solid var(--brand-pink)' : '1px solid var(--admin-border)', 
+                  flex: 1,
+                  padding: '12px 16px', 
+                  border: productType === 'domestic' ? '2px solid var(--brand-pink)' : '1px solid #e2e8f0', 
                   borderRadius: '8px', 
                   cursor: 'pointer', 
                   display: 'flex', 
-                  flexDirection: 'column', 
-                  gap: '4px',
-                  backgroundColor: productType === 'domestic' ? '#fff0f6' : 'transparent',
+                  alignItems: 'center',
+                  gap: '12px',
+                  backgroundColor: productType === 'domestic' ? '#fff0f6' : '#ffffff',
                   transition: 'all 0.2s'
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '14px', fontWeight: '700', color: productType === 'domestic' ? 'var(--brand-pink)' : 'var(--admin-text-main)' }}>Domestic / Inhouse / Vendor</span>
-                  {productType === 'domestic' && <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--brand-pink)' }}></div>}
+                <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: productType === 'domestic' ? '5px solid var(--brand-pink)' : '2px solid #cbd5e1', backgroundColor: '#fff', flexShrink: 0, transition: 'all 0.2s' }} />
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: productType === 'domestic' ? '#901254' : '#334155', marginBottom: '2px' }}>Domestic Item</div>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>Local stock & vendors</div>
                 </div>
-                <span style={{ fontSize: '12px', color: 'var(--admin-text-muted)' }}>Local stock and vendor items</span>
               </div>
               
               <div 
                 onClick={() => setProductType('global')}
                 style={{ 
-                  padding: '16px', 
-                  border: productType === 'global' ? '2px solid var(--brand-pink)' : '1px solid var(--admin-border)', 
+                  flex: 1,
+                  padding: '12px 16px', 
+                  border: productType === 'global' ? '2px solid var(--brand-pink)' : '1px solid #e2e8f0', 
                   borderRadius: '8px', 
                   cursor: 'pointer', 
                   display: 'flex', 
-                  flexDirection: 'column', 
-                  gap: '4px',
-                  backgroundColor: productType === 'global' ? '#fff0f6' : 'transparent',
+                  alignItems: 'center',
+                  gap: '12px',
+                  backgroundColor: productType === 'global' ? '#fff0f6' : '#ffffff',
                   transition: 'all 0.2s'
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '14px', fontWeight: '700', color: productType === 'global' ? 'var(--brand-pink)' : 'var(--admin-text-main)' }}>Global Product</span>
-                  {productType === 'global' && <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--brand-pink)' }}></div>}
+                <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: productType === 'global' ? '5px solid var(--brand-pink)' : '2px solid #cbd5e1', backgroundColor: '#fff', flexShrink: 0, transition: 'all 0.2s' }} />
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: productType === 'global' ? '#901254' : '#334155', marginBottom: '2px' }}>Global Sourcing</div>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>International items</div>
                 </div>
-                <span style={{ fontSize: '12px', color: 'var(--admin-text-muted)' }}>International sourcing items</span>
               </div>
               
               <div 
                 onClick={() => setProductType('factory')}
                 style={{ 
-                  padding: '16px', 
-                  border: productType === 'factory' ? '2px solid var(--brand-pink)' : '1px solid var(--admin-border)', 
+                  flex: 1,
+                  padding: '12px 16px', 
+                  border: productType === 'factory' ? '2px solid var(--brand-pink)' : '1px solid #e2e8f0', 
                   borderRadius: '8px', 
                   cursor: 'pointer', 
                   display: 'flex', 
-                  flexDirection: 'column', 
-                  gap: '4px',
-                  backgroundColor: productType === 'factory' ? '#fff0f6' : 'transparent',
+                  alignItems: 'center',
+                  gap: '12px',
+                  backgroundColor: productType === 'factory' ? '#fff0f6' : '#ffffff',
                   transition: 'all 0.2s'
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '14px', fontWeight: '700', color: productType === 'factory' ? 'var(--brand-pink)' : 'var(--admin-text-main)' }}>Factory Product</span>
-                  {productType === 'factory' && <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--brand-pink)' }}></div>}
+                <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: productType === 'factory' ? '5px solid var(--brand-pink)' : '2px solid #cbd5e1', backgroundColor: '#fff', flexShrink: 0, transition: 'all 0.2s' }} />
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: productType === 'factory' ? '#901254' : '#334155', marginBottom: '2px' }}>Factory Direct</div>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>Bulk factory products</div>
                 </div>
-                <span style={{ fontSize: '12px', color: 'var(--admin-text-muted)' }}>Direct from factory bulk items</span>
               </div>
-
             </div>
           </div>
 
