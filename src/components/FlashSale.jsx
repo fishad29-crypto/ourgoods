@@ -13,6 +13,21 @@ const FlashSale = ({ category }) => {
   });
   const scrollRef = useRef(null);
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const touchStartX = useRef(0);
+  const handleTouchStart = (e) => touchStartX.current = e.touches[0].clientX;
+  const handleTouchEnd = (e) => {
+    const touchEndX = e.changedTouches[0].clientX;
+    if (touchStartX.current - touchEndX > 50) scrollRight();
+    if (touchStartX.current - touchEndX < -50) scrollLeft();
+  };
+
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const scrollLeft = () => {
@@ -140,9 +155,9 @@ const FlashSale = ({ category }) => {
           <i className="las la-angle-right"></i>
         </div>
 
-        <div ref={scrollRef} className="no-scrollbar" style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '15px', scrollBehavior: 'smooth' }}>
+        <div ref={scrollRef} className="no-scrollbar" style={{ display: 'flex', gap: '10px', overflowX: 'hidden', padding: '15px', scrollBehavior: 'smooth' }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
           {displayProducts.slice(currentIndex, currentIndex + 3).map((product) => (
-          <div key={product.id} style={{ minWidth: '110px', width: '110px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+          <div key={product.id} style={{ minWidth: isMobile ? 'calc(33.33% - 7px)' : '110px', width: isMobile ? 'calc(33.33% - 7px)' : '110px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
             
             {/* Image Box */}
             <div style={{ position: 'relative', width: '100%', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', background: '#f5f5f5', marginBottom: '8px' }}>

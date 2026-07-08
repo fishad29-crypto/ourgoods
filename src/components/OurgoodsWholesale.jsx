@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { saveScrollAndNavigate } from '../utils/navigation';
 import { getAllProducts } from '../utils/MockData';
@@ -25,6 +25,21 @@ const OurgoodsWholesale = () => {
     }
     return products;
   }, []);
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const touchStartX = useRef(0);
+  const handleTouchStart = (e) => touchStartX.current = e.touches[0].clientX;
+  const handleTouchEnd = (e) => {
+    const touchEndX = e.changedTouches[0].clientX;
+    if (touchStartX.current - touchEndX > 50) scrollRight();
+    if (touchStartX.current - touchEndX < -50) scrollLeft();
+  };
 
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -72,7 +87,7 @@ const OurgoodsWholesale = () => {
             </div>
             
             {/* Delivery text */}
-            <div style={{ paddingLeft: '28px', fontSize: '8.5px', letterSpacing: '-0.2px', whiteSpace: 'nowrap', color: 'rgba(255, 255, 255, 0.9)', marginTop: '2px', fontWeight: 600 }}>
+            <div style={{ paddingLeft: '28px', fontSize: isMobile ? '7.5px' : '8.5px', letterSpacing: '-0.2px', whiteSpace: isMobile ? 'normal' : 'nowrap', color: 'rgba(255, 255, 255, 0.9)', marginTop: '2px', fontWeight: 600 }}>
               Domestic: 1-3 Days • International: 21-28 Days • Express: 4-7 Days
             </div>
           </div>
@@ -93,9 +108,9 @@ const OurgoodsWholesale = () => {
             <i className="las la-angle-right"></i>
           </div>
           
-          <div ref={scrollRef} className="no-scrollbar" style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '15px', scrollBehavior: 'smooth' }}>
+          <div ref={scrollRef} className="no-scrollbar" style={{ display: 'flex', gap: '10px', overflowX: 'hidden', padding: '15px', scrollBehavior: 'smooth' }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
             {wholesaleProducts.slice(currentIndex, currentIndex + 3).map((product) => (
-            <div key={product.id} style={{ minWidth: '110px', width: '110px', flexShrink: 0, display: 'flex', flexDirection: 'column', cursor: 'pointer' }} onClick={() => navigate(`/product/${product.id}`)}>
+            <div key={product.id} style={{ minWidth: isMobile ? 'calc(33.33% - 7px)' : '110px', width: isMobile ? 'calc(33.33% - 7px)' : '110px', flexShrink: 0, display: 'flex', flexDirection: 'column', cursor: 'pointer' }} onClick={() => navigate(`/product/${product.id}`)}>
               
               {/* Image Box */}
               <div style={{ position: 'relative', width: '100%', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', background: '#f5f5f5', marginBottom: '8px', border: '1px solid #eaeaea' }}>
