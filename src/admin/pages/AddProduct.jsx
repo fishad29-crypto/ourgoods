@@ -847,34 +847,95 @@ const AddProduct = () => {
           </div>
 
           {/* Variants */}
-          <div className="form-section" style={{ backgroundColor: 'var(--admin-surface)', padding: '24px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
+          {/* Variants */}
+          <div className="form-section" style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Variants / Attributes</h3>
               <button className="btn-outline" onClick={handleAddAttribute} style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}><Plus size={14} /> Add Variant</button>
             </div>
             
             {(formData.attributes || []).map((attr, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '16px', background: 'var(--admin-bg)', padding: '12px', borderRadius: '8px' }}>
+              <div key={idx} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', marginBottom: '16px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
                 <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '12px' }}>Attribute Name (e.g., Color, Model, ML)</label>
-                  <input type="text" className="form-input" placeholder="Name" value={attr.name} onChange={(e) => handleAttributeChange(idx, 'name', e.target.value)} />
+                  <label className="form-label" style={{ fontSize: '12px', color: '#64748b' }}>Attribute Name</label>
+                  <select 
+                    className="form-input" 
+                    value={attr.name} 
+                    onChange={(e) => handleAttributeChange(idx, 'name', e.target.value)}
+                    style={{ cursor: 'pointer', appearance: 'none', background: '#fff url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E") no-repeat right .75rem top 50%', backgroundSize: "12px auto", paddingRight: "30px" }}
+                  >
+                    <option value="">Custom Name...</option>
+                    <option value="Color">Color</option>
+                    <option value="Size">Size</option>
+                    <option value="Material">Material</option>
+                    <option value="Style">Style</option>
+                    <option value="Capacity">Capacity</option>
+                    <option value="Model">Model</option>
+                  </select>
+                  {!['Color', 'Size', 'Material', 'Style', 'Capacity', 'Model'].includes(attr.name) && (
+                     <input type="text" className="form-input" style={{ marginTop: '8px' }} placeholder="Enter custom name" value={attr.name} onChange={(e) => handleAttributeChange(idx, 'name', e.target.value)} />
+                  )}
                 </div>
                 <div className="form-group" style={{ flex: 2, marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '12px' }}>Options (Comma separated)</label>
+                  <label className="form-label" style={{ fontSize: '12px', color: '#64748b' }}>Options (Comma separated)</label>
                   <input type="text" className="form-input" placeholder="e.g. Red, Blue, Green" value={attr.options} onChange={(e) => handleAttributeChange(idx, 'options', e.target.value)} />
+                  
+                  {/* Quick Select Chips */}
+                  {attr.name === 'Color' && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
+                      {['Red', 'Blue', 'Green', 'Black', 'White', 'Yellow', 'Pink', 'Purple', 'Orange', 'Grey', 'Navy', 'Brown'].map(color => (
+                        <span 
+                          key={color}
+                          onClick={() => {
+                            const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
+                            if (!currentOpts.includes(color)) {
+                              handleAttributeChange(idx, 'options', [...currentOpts, color].join(', '));
+                            }
+                          }}
+                          style={{ fontSize: '11px', padding: '4px 10px', background: '#e2e8f0', borderRadius: '16px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.2s', border: '1px solid #cbd5e1' }}
+                          onMouseOver={(e) => { e.currentTarget.style.background = '#cbd5e1'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                        >
+                          + {color}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {attr.name === 'Size' && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
+                      {['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', 'Free Size'].map(size => (
+                        <span 
+                          key={size}
+                          onClick={() => {
+                            const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
+                            if (!currentOpts.includes(size)) {
+                              handleAttributeChange(idx, 'options', [...currentOpts, size].join(', '));
+                            }
+                          }}
+                          style={{ fontSize: '11px', padding: '4px 10px', background: '#e2e8f0', borderRadius: '16px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.2s', border: '1px solid #cbd5e1' }}
+                          onMouseOver={(e) => { e.currentTarget.style.background = '#cbd5e1'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                        >
+                          + {size}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <button 
                   className="icon-btn" 
                   onClick={() => handleRemoveAttribute(idx)}
-                  style={{ marginTop: '24px', color: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)' }}
+                  style={{ marginTop: '26px', color: '#ef4444', backgroundColor: '#fee2e2', border: '1px solid #fca5a5', padding: '8px', borderRadius: '8px' }}
                   title="Remove Attribute"
+                  onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#fca5a5'; e.currentTarget.style.color = '#b91c1c'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.color = '#ef4444'; }}
                 >
                   <Trash2 size={16} />
                 </button>
               </div>
             ))}
             {(!formData.attributes || formData.attributes.length === 0) && (
-              <div style={{ textAlign: 'center', padding: '20px', color: '#888', fontSize: '14px', background: 'var(--admin-bg)', borderRadius: '8px' }}>
+              <div style={{ textAlign: 'center', padding: '20px', color: '#64748b', fontSize: '14px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
                 No variants added. Click "Add Variant" to allow buyers to select options.
               </div>
             )}
