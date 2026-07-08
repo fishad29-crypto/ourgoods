@@ -35,7 +35,7 @@ const AddProduct = () => {
       infoSections: [],
       regularPrice: '', salePrice: '', costPrice: '',
       sku: '', stock: '', attributes: [{ name: 'Color', options: '' }, { name: 'Size', options: '' }],
-      category: '', subcategory: '', brand: '',
+      category: '', subcategory: '', brand: '', placements: [],
       vendor: 'OURGOODS Direct', type: 'Local Ready Stock',
       tags: '', weight: '', deliveryTime: '',
       returnPolicy: '7 Days Easy Return', status: 'Active',
@@ -1268,6 +1268,33 @@ const AddProduct = () => {
             </div>
           </div>
           
+          {/* Special Placements */}
+          <div className="form-section" style={{ backgroundColor: 'var(--admin-surface)', padding: '24px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '16px', fontWeight: 600 }}>Special Placements</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {['Flash Sale', 'Global Shop', 'Factory Direct'].map(placement => {
+                const currentPlacements = Array.isArray(formData.placements) ? formData.placements : (formData.placements ? formData.placements.split(', ') : []);
+                const isChecked = currentPlacements.includes(placement);
+                return (
+                  <label key={placement} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#334155', cursor: 'pointer' }}>
+                    <input 
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => {
+                        const newPlacements = e.target.checked
+                          ? [...currentPlacements, placement]
+                          : currentPlacements.filter(p => p !== placement);
+                        setFormData(prev => ({ ...prev, placements: newPlacements }));
+                      }}
+                      style={{ width: '16px', height: '16px', borderRadius: '4px', cursor: 'pointer', accentColor: 'var(--brand-pink)' }}
+                    />
+                    {placement}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Organization */}
           <div className="form-section" style={{ backgroundColor: 'var(--admin-surface)', padding: '24px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
             <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '16px', fontWeight: 600 }}>Organization</h3>
