@@ -539,14 +539,22 @@ const AddProduct = () => {
   };
 
   const handlePublish = () => {
-    if (!formData.name || !formData.salePrice || !formData.category) {
+    const hasCategory = Array.isArray(formData.category) ? formData.category.length > 0 : !!formData.category;
+    
+    if (!formData.name || !formData.salePrice || !hasCategory) {
       alert("Please fill in all required fields (Name, Selling Price, Category) before publishing.");
       return;
     }
     
+    // Format categories to string if needed by backend, or just send array
+    const finalCategory = Array.isArray(formData.category) ? formData.category.join(', ') : formData.category;
+    const finalSubcategory = Array.isArray(formData.subcategory) ? formData.subcategory.join(', ') : formData.subcategory;
+
     // Send to frontend site
     addProductToFrontend({
       ...formData,
+      category: finalCategory,
+      subcategory: finalSubcategory,
       type: productType,
       images: images
     });
@@ -554,7 +562,7 @@ const AddProduct = () => {
     localStorage.removeItem('addProductData');
     localStorage.removeItem('addProductImages');
     
-    alert(`Success! "${formData.name}" has been successfully published to the front site! You can now see it in New Arrivals and the ${formData.category} category.`);
+    alert(`Success! "${formData.name}" has been successfully published to the front site! You can now see it in New Arrivals and the ${finalCategory} category.`);
     navigate('/admin/products');
   };
 
@@ -1154,37 +1162,74 @@ const AddProduct = () => {
         {/* Right Column - Organization & Settings */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
+          {/* Categories */}
+          <div className="form-section" style={{ backgroundColor: 'var(--admin-surface)', padding: '24px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '16px', fontWeight: 600 }}>Categories</h3>
+            
+            <div style={{ maxHeight: '350px', overflowY: 'auto', paddingRight: '8px', display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
+              {Object.entries(categoryMap).map(([cat, subcats]) => {
+                const currentCats = Array.isArray(formData.category) ? formData.category : (formData.category ? formData.category.split(', ') : []);
+                const isCatChecked = currentCats.includes(cat);
+                
+                return (
+                  <div key={cat}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#334155', cursor: 'pointer', fontWeight: isCatChecked ? 600 : 400 }}>
+                      <input 
+                        type="checkbox" 
+                        checked={isCatChecked}
+                        onChange={(e) => {
+                          const newCats = e.target.checked 
+                            ? [...currentCats, cat]
+                            : currentCats.filter(c => c !== cat);
+                          setFormData(prev => ({ ...prev, category: newCats }));
+                        }}
+                        style={{ width: '16px', height: '16px', borderRadius: '4px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                      />
+                      {cat}
+                    </label>
+                    
+                    {/* Subcategories (Indented) */}
+                    {subcats && subcats.length > 0 && (
+                      <div style={{ paddingLeft: '26px', marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {subcats.map(sub => {
+                          const currentSubcats = Array.isArray(formData.subcategory) ? formData.subcategory : (formData.subcategory ? formData.subcategory.split(', ') : []);
+                          const isSubChecked = currentSubcats.includes(sub);
+                          return (
+                            <label key={sub} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', color: '#64748b', cursor: 'pointer' }}>
+                              <input 
+                                type="checkbox" 
+                                checked={isSubChecked}
+                                onChange={(e) => {
+                                  const newSubcats = e.target.checked 
+                                    ? [...currentSubcats, sub]
+                                    : currentSubcats.filter(s => s !== sub);
+                                  setFormData(prev => ({ ...prev, subcategory: newSubcats }));
+                                }}
+                                style={{ width: '14px', height: '14px', borderRadius: '3px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                              />
+                              {sub}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              
+              <div style={{ marginTop: '4px', paddingTop: '12px' }}>
+                <button type="button" style={{ color: '#3b82f6', background: 'none', border: 'none', padding: 0, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }} onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'} onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}>
+                  + Create Category
+                </button>
+              </div>
+            </div>
+          </div>
+          
           {/* Organization */}
           <div className="form-section" style={{ backgroundColor: 'var(--admin-surface)', padding: '24px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
             <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '16px', fontWeight: 600 }}>Organization</h3>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div className="form-group">
-                <label className="form-label">Category *</label>
-                <select className="form-input" name="category" value={formData.category} onChange={handleChange}>
-                  <option value="">Select Category</option>
-                  {Object.keys(categoryMap).map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Subcategory</label>
-                <select 
-                  className="form-input" 
-                  name="subcategory" 
-                  value={formData.subcategory} 
-                  onChange={handleChange}
-                  disabled={!formData.category}
-                >
-                  <option value="">Select Subcategory</option>
-                  {formData.category && categoryMap[formData.category] ? (
-                    categoryMap[formData.category].map(sub => (
-                      <option key={sub} value={sub}>{sub}</option>
-                    ))
-                  ) : null}
-                </select>
-              </div>
               <div className="form-group">
                 <label className="form-label">Brand</label>
                 <input type="text" name="brand" className="form-input" placeholder="Brand name" value={formData.brand} onChange={handleChange} />
