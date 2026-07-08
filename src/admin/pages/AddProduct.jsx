@@ -11,25 +11,44 @@ import '../admin.css';
 const AddProduct = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [images, setImages] = useState([]);
+  const [images, setImages] = useState(() => {
+    try {
+      const saved = localStorage.getItem('addProductImages');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [isCompressing, setIsCompressing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [showMediaManager, setShowMediaManager] = useState(false);
   const [importUrl, setImportUrl] = useState('');
-  const [formData, setFormData] = useState({
-    name: '', ribbon: '', description: '', features: '',
-    infoSections: [],
-    regularPrice: '', salePrice: '', costPrice: '',
-    sku: '', stock: '', attributes: [{ name: 'Color', options: '' }, { name: 'Size', options: '' }],
-    category: '', subcategory: '', brand: '',
-    vendor: 'OURGOODS Direct', type: 'Local Ready Stock',
-    tags: '', weight: '', deliveryTime: '',
-    returnPolicy: '7 Days Easy Return', status: 'Active',
-    seoTitle: '', seoDescription: ''
+  const [formData, setFormData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('addProductData');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      name: '', ribbon: '', description: '', features: '',
+      infoSections: [],
+      regularPrice: '', salePrice: '', costPrice: '',
+      sku: '', stock: '', attributes: [{ name: 'Color', options: '' }, { name: 'Size', options: '' }],
+      category: '', subcategory: '', brand: '',
+      vendor: 'OURGOODS Direct', type: 'Local Ready Stock',
+      tags: '', weight: '', deliveryTime: '',
+      returnPolicy: '7 Days Easy Return', status: 'Active',
+      seoTitle: '', seoDescription: ''
+    };
   });
   const [productType, setProductType] = useState('domestic');
   const fileInputRef = React.useRef(null);
+
+  React.useEffect(() => {
+    localStorage.setItem('addProductData', JSON.stringify(formData));
+  }, [formData]);
+
+  React.useEffect(() => {
+    localStorage.setItem('addProductImages', JSON.stringify(images));
+  }, [images]);
 
   React.useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -493,12 +512,17 @@ const AddProduct = () => {
       images: images
     });
     
+    localStorage.removeItem('addProductData');
+    localStorage.removeItem('addProductImages');
+    
     alert(`Success! "${formData.name}" has been successfully published to the front site! You can now see it in New Arrivals and the ${formData.category} category.`);
     navigate('/admin/products');
   };
 
   const handleClearAll = () => {
     if (window.confirm("Are you sure you want to clear all fields? This cannot be undone.")) {
+      localStorage.removeItem('addProductData');
+      localStorage.removeItem('addProductImages');
       setFormData({
         name: '', description: '', features: '',
         regularPrice: '', salePrice: '', costPrice: '',
