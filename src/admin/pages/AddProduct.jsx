@@ -593,7 +593,18 @@ const AddProduct = () => {
         onSelect={handleMediaSelect} 
       />
       {/* Header */}
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="page-header" style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        position: 'sticky',
+        top: '0',
+        zIndex: 50,
+        backgroundColor: 'var(--admin-bg, #f4f6f8)',
+        padding: '16px 0',
+        marginBottom: '24px',
+        borderBottom: '1px solid var(--admin-border)'
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <button className="icon-btn" onClick={() => navigate('/admin/products')}>
             <ArrowLeft size={20} />
