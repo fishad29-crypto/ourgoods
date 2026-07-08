@@ -41,14 +41,7 @@ const AddProduct = () => {
     };
   });
   const [productType, setProductType] = useState('domestic');
-  const [categories, setCategories] = useState({
-    "Electronics": ["Mobiles", "Laptops", "Audio", "Smartwatches", "Accessories"],
-    "Women Fashion": ["Dresses", "Tops", "Pants", "Shoes", "Bags", "Jewelry", "T-Shirts & Polos"],
-    "Men Fashion": ["T-Shirts", "Shirts", "Pants", "Shoes", "Watches", "Jackets"],
-    "Bags & Luggage": ["Backpacks", "Suitcases", "Handbags", "Wallets"],
-    "Beauty & Health": ["Makeup", "Skincare", "Haircare", "Personal Care"],
-    "Home & Decor": ["Furniture", "Lighting", "Bedding", "Kitchenware"]
-  });
+  const [categories, setCategories] = useState({});
   const fileInputRef = React.useRef(null);
 
   React.useEffect(() => {
