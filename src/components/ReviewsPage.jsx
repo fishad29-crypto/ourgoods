@@ -6,12 +6,19 @@ import './ReviewsPage.css';
 const ReviewsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const product = getAllProducts().find(p => p.id === parseInt(id));
+  const product = getAllProducts().find(p => String(p.id) === String(id));
 
-  if (!product) return <div style={{ padding: '20px', textAlign: 'center' }}>Product not found</div>;
+  const randomReviewCount = React.useMemo(() => {
+    if (!product) return 488;
+    const numId = parseInt(String(product.id).replace(/\D/g, '')) || 0;
+    return 100 + (numId * 17) % 900;
+  }, [product]);
+
+  if (!product) return <div style={{ padding: '20px', textAlign: 'center', marginTop: '50px' }}>Product not found (ID: {id})</div>;
 
   return (
-    <div className="reviews-page">
+    <div className="reviews-page-container">
+      <div className="reviews-page">
       <div className="reviews-header">
         <i className="las la-arrow-left" onClick={() => navigate(-1)}></i>
         <h2>All Reviews</h2>
@@ -22,7 +29,7 @@ const ReviewsPage = () => {
         <div className="rating-stars">
           <i className="las la-star"></i><i className="las la-star"></i><i className="las la-star"></i><i className="las la-star"></i><i className="las la-star-half-alt"></i>
         </div>
-        <div className="rating-count">Based on 488 reviews</div>
+        <div className="rating-count">Based on {randomReviewCount} reviews</div>
       </div>
 
       <div className="review-tags-container">
@@ -34,10 +41,43 @@ const ReviewsPage = () => {
         <span className="pdd-review-tag">Perfect Color</span>
       </div>
 
-      <div className="reviews-list" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 16px', color: '#999' }}>
-        <i className="las la-clock" style={{ fontSize: '48px', color: '#ccc', marginBottom: '16px' }}></i>
-        <h3 style={{ margin: '0 0 8px 0', color: '#333' }}>Coming Soon</h3>
-        <p style={{ textAlign: 'center', margin: 0 }}>Detailed reviews are currently being updated.</p>
+      <div className="reviews-list">
+        {Array.from({ length: 12 }).map((_, i) => {
+          const mockTexts = [
+            "Received the item, it's very good and fits perfectly. Will definitely buy again!",
+            "Great quality for the price. Fast shipping.",
+            "Looks exactly like the picture. Very satisfied with the purchase.",
+            "The color is slightly different, but overall a good product.",
+            "Highly recommended! The seller was very responsive.",
+            "Good packaging and fast delivery. Product is 10/10.",
+            "Value for money. I will buy another one for my sister.",
+            "Quality is decent, but delivery took a bit longer than expected.",
+            "Very comfortable and premium feel. Worth every taka.",
+            "Authentic product. Really happy with the service."
+          ];
+          const text = mockTexts[(i + parseInt(id.replace(/\D/g, '') || 0)) % mockTexts.length];
+          const rating = 4 + (i % 2); // 4 or 5 stars
+          
+          return (
+            <div key={i} className="review-item">
+              <div className="review-user-info">
+                <i className="las la-user-circle"></i>
+                <span>User***{Math.floor(Math.random() * 900) + 100}</span>
+              </div>
+              <div className="review-rating">
+                {Array.from({ length: 5 }).map((_, starIdx) => (
+                  <i key={starIdx} className={starIdx < rating ? "las la-star" : "lar la-star"}></i>
+                ))}
+              </div>
+              <p className="review-text">{text}</p>
+              <div className="review-date">2026-06-{String((i * 3) % 28 + 1).padStart(2, '0')}</div>
+            </div>
+          );
+        })}
+        <div style={{ textAlign: 'center', padding: '24px 0', color: '#666', fontSize: '14px' }}>
+          Showing 12 of {randomReviewCount} reviews
+        </div>
+      </div>
       </div>
     </div>
   );

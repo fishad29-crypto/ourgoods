@@ -1,5 +1,5 @@
 import React from 'react';
-import CreditRewardBanner from './CreditRewardBanner';
+import { Link } from 'react-router-dom';
 
 const quickLinks = [
   { 
@@ -76,13 +76,8 @@ const QuickCategories = () => {
         alignItems: 'center'
       }}>
         
-        {/* Left Half: Banner */}
-        <div style={{ flex: '1 1 320px', minWidth: 0 }}>
-          <CreditRewardBanner />
-        </div>
-
-        {/* Right Half: Icons */}
-        <div className="no-scrollbar" style={{ flex: '1 1 320px', minWidth: 0, overflowX: 'auto' }}>
+        {/* Full width icons since banner is gone */}
+        <div className="no-scrollbar" style={{ flex: '1 1 100%', minWidth: 0, overflowX: 'auto' }}>
           <div style={{ display: 'flex', gap: '20px', minWidth: 'max-content', width: 'fit-content', margin: '0 auto', alignItems: 'center', height: '100%' }}>
             {quickLinks.map(link => (
               <div key={link.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '70px', cursor: 'pointer' }}>

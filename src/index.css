@@ -318,7 +318,7 @@ button {
     flex-direction: row;
     gap: 20px;
     align-items: stretch;
-    padding: 0 15px; /* Add padding to wrapper for desktop */
+    padding: 0; /* Align with full width elements */
   }
   .three-col-desktop > div {
     flex: 1;
@@ -407,4 +407,31 @@ button {
 
 .floating-logo {
   animation: pulseLoading 1.5s ease-in-out infinite;
+}
+
+.desktop-slider-arrow {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .desktop-slider-arrow {
+    display: flex;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    z-index: 10;
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .desktop-slider-arrow:hover {
+    background: #ffffff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
 }

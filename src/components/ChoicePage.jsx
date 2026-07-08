@@ -9,7 +9,15 @@ const ChoicePage = () => {
   const [sort, setSort] = useState('Recommended');
 
   useEffect(() => {
-    window.scrollTo(0, 0);
+    const savedScroll = sessionStorage.getItem(`scroll_${window.location.pathname}`);
+    if (savedScroll) {
+      setTimeout(() => {
+        window.scrollTo(0, parseInt(savedScroll, 10));
+        sessionStorage.removeItem(`scroll_${window.location.pathname}`);
+      }, 50);
+    } else {
+      window.scrollTo(0, 0);
+    }
     const choiceItems = getChoiceProducts();
     setProducts(choiceItems);
     setFilteredProducts(choiceItems);

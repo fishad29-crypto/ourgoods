@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import CreditRewardBanner from './CreditRewardBanner';
 
 const ProfilePage = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -80,7 +81,7 @@ const ProfilePage = () => {
     <div style={{ background: '#f5f5f5', height: '100%', overflowY: 'auto' }}>
       
       {/* Header Profile Section */}
-      <div style={{ background: '#000', padding: '40px 20px 30px', color: '#fff', borderBottomLeftRadius: '25px', borderBottomRightRadius: '25px', position: 'relative' }}>
+      <div style={{ background: 'var(--brand-pink)', padding: '40px 20px 30px', color: '#fff', borderBottomLeftRadius: '25px', borderBottomRightRadius: '25px', position: 'relative' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <div style={{ 
             width: '60px', height: '60px', borderRadius: '50%', background: '#fff', 
@@ -109,7 +110,14 @@ const ProfilePage = () => {
 
       {/* Auth Prompt if Logged Out */}
       {!isLoggedIn && (
-        <div style={{ padding: '20px', marginTop: '-20px', position: 'relative', zIndex: 2 }}>
+        <div style={{ padding: '20px 20px 0', marginTop: '-20px', position: 'relative', zIndex: 2 }}>
+          <CreditRewardBanner />
+        </div>
+      )}
+
+      {/* Auth Prompt if Logged Out */}
+      {!isLoggedIn && (
+        <div style={{ padding: '0 20px 20px', position: 'relative', zIndex: 2 }}>
           <div style={{ background: '#fff', padding: '20px', borderRadius: '16px', display: 'flex', gap: '15px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
             <button onClick={() => setView('login')} style={{ flex: 1, background: '#111', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>
               Log In

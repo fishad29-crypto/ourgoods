@@ -19,6 +19,18 @@ const MessagePage = ({ onClose, onChatOpen }) => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
+  useEffect(() => {
+    // Lock body scroll and remove padding so the chat takes up the exact viewport
+    const originalOverflow = document.body.style.overflow;
+    const originalPadding = document.body.style.paddingBottom;
+    document.body.style.overflow = 'hidden';
+    document.body.style.paddingBottom = '0';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingBottom = originalPadding;
+    };
+  }, []);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -64,7 +76,7 @@ const MessagePage = ({ onClose, onChatOpen }) => {
   if (activeChatId === null) {
     // INBOX VIEW
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#fff' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100dvh - 65px)', background: '#fff' }}>
         {/* Inbox Header */}
         <div style={{ padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eaeaea', position: 'sticky', top: 0, background: '#fff', zIndex: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -124,7 +136,7 @@ const MessagePage = ({ onClose, onChatOpen }) => {
   const activeChat = inboxList.find(c => c.id === activeChatId);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 95px)', background: '#f5f5f5', position: 'relative' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100dvh - 65px)', background: '#f5f5f5', position: 'relative' }}>
       
       {/* Header */}
       <div style={{ 
@@ -134,8 +146,7 @@ const MessagePage = ({ onClose, onChatOpen }) => {
         justifyContent: 'space-between', 
         alignItems: 'center',
         borderBottom: '1px solid #eaeaea',
-        position: 'sticky',
-        top: 0,
+        flexShrink: 0,
         zIndex: 10
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -160,8 +171,8 @@ const MessagePage = ({ onClose, onChatOpen }) => {
       </div>
 
       {/* Messages List Area */}
-      <div style={{ flex: 1, padding: '20px', paddingBottom: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-        <div style={{ textAlign: 'center', fontSize: '11px', color: '#999', margin: '10px 0' }}>Today, 9:41 AM</div>
+      <div style={{ flex: 1, padding: '20px', paddingBottom: '20px', display: 'flex', flexDirection: 'column', gap: '15px', overflowY: 'auto' }}>
+        <div style={{ textAlign: 'center', fontSize: '11px', color: '#999', margin: '10px 0', flexShrink: 0 }}>Today, 9:41 AM</div>
         
         {messages.map((msg) => (
           <div key={msg.id} style={{ display: 'flex', justifyContent: msg.isBot ? 'flex-start' : 'flex-end' }}>
@@ -172,13 +183,13 @@ const MessagePage = ({ onClose, onChatOpen }) => {
             )}
             <div style={{
               maxWidth: '75%',
-              padding: '12px 16px',
-              borderRadius: '16px',
-              borderBottomLeftRadius: msg.isBot ? '4px' : '16px',
-              borderBottomRightRadius: !msg.isBot ? '4px' : '16px',
+              padding: '12px 18px',
+              borderRadius: '20px',
+              borderBottomLeftRadius: msg.isBot ? '4px' : '20px',
+              borderBottomRightRadius: !msg.isBot ? '4px' : '20px',
               background: msg.isBot ? '#fff' : '#111',
               color: msg.isBot ? '#333' : '#fff',
-              fontSize: '13px',
+              fontSize: '13.5px',
               lineHeight: '1.5',
               boxShadow: '0 2px 5px rgba(0,0,0,0.03)',
               border: msg.isBot ? '1px solid #eaeaea' : 'none'
@@ -193,7 +204,7 @@ const MessagePage = ({ onClose, onChatOpen }) => {
              <div style={{ background: 'var(--brand-pink)', color: '#fff', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '16px', marginRight: '8px', flexShrink: 0 }}>
                <i className={`las ${activeChat?.icon}`}></i>
              </div>
-             <div style={{ background: '#fff', padding: '12px 16px', borderRadius: '16px', fontSize: '14px', color: '#999', border: '1px solid #eaeaea', borderBottomLeftRadius: '4px', display: 'flex', alignItems: 'center' }}>
+             <div style={{ background: '#fff', padding: '12px 18px', borderRadius: '20px', fontSize: '14px', color: '#999', border: '1px solid #eaeaea', borderBottomLeftRadius: '4px', display: 'flex', alignItems: 'center' }}>
                <i className="las la-ellipsis-h la-spin" style={{ fontSize: '20px' }}></i>
              </div>
           </div>
@@ -201,16 +212,15 @@ const MessagePage = ({ onClose, onChatOpen }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Sticky Input Area */}
+      {/* Input Area (No longer fixed, sits naturally at bottom) */}
       <div style={{ 
-        position: 'sticky', 
-        bottom: 0, // Nav is hidden, so this goes all the way to the bottom
         background: '#fff', 
         padding: '12px 15px', 
         borderTop: '1px solid #eaeaea',
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
+        flexShrink: 0,
         zIndex: 10
       }}>
         <i className="las la-plus-circle" style={{ fontSize: '28px', color: '#888', cursor: 'pointer' }}></i>

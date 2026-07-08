@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { saveScrollAndNavigate } from '../utils/navigation';
 
 const flashSaleProducts = [
   {
@@ -88,11 +90,21 @@ const flashSaleProducts = [
 ];
 
 const FlashSale = ({ category }) => {
+  const navigate = useNavigate();
   const [timeLeft, setTimeLeft] = useState({
     hours: 2,
     minutes: 13,
     seconds: 5
   });
+  const scrollRef = useRef(null);
+
+  const scrollLeft = () => {
+    if (scrollRef.current) scrollRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+  };
+  const scrollRight = () => {
+    if (scrollRef.current) scrollRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+  };
+
 
   const displayProducts = category 
     ? flashSaleProducts.filter(p => p.categories && p.categories.includes(category))
@@ -132,6 +144,7 @@ const FlashSale = ({ category }) => {
         background: '#fff',
         border: '1px solid #eaeaea',
         borderRadius: '8px',
+        overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column'
       }}>
@@ -142,45 +155,60 @@ const FlashSale = ({ category }) => {
         justifyContent: 'space-between', 
         alignItems: 'center', 
         padding: '12px 15px',
-        borderBottom: 'none'
+        background: '#111',
+        borderTopLeftRadius: '8px',
+        borderTopRightRadius: '8px'
       }}>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Flash Icon & Title */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <i className="las la-bolt" style={{ color: 'var(--brand-pink)', fontSize: '22px' }}></i>
-            <span style={{ fontWeight: 900, fontSize: '16px', color: '#111' }}>Flash Sale</span>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Flash Icon & Title */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <i className="las la-bolt" style={{ color: '#fff', fontSize: '24px' }}></i>
+              <span style={{ fontWeight: 900, fontSize: '16px', color: '#fff', letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>Flash Sale</span>
+            </div>
           </div>
 
           {/* Countdown Timer */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '6px' }}>
-            <span style={{ color: 'var(--brand-pink)', fontSize: '11px', fontWeight: 600, marginRight: '2px' }}>Ends in</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', paddingLeft: '30px', marginTop: '2px' }}>
+            <span style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '10px', fontWeight: 600, marginRight: '2px' }}>Ends in</span>
             
-            <div style={{ background: '#fff', border: '1px solid #eaeaea', color: 'var(--brand-pink)', borderRadius: '4px', padding: '1px 4px', fontSize: '11px', fontWeight: 800 }}>
+            <div style={{ background: '#222', border: 'none', color: 'var(--brand-pink)', borderRadius: '4px', padding: '1px 4px', fontSize: '10px', fontWeight: 800 }}>
               {formatTime(timeLeft.hours)}
             </div>
             <span style={{ color: 'var(--brand-pink)', fontSize: '10px', fontWeight: 900 }}>:</span>
             
-            <div style={{ background: '#fff', border: '1px solid #eaeaea', color: 'var(--brand-pink)', borderRadius: '4px', padding: '1px 4px', fontSize: '11px', fontWeight: 800 }}>
+            <div style={{ background: '#222', border: 'none', color: 'var(--brand-pink)', borderRadius: '4px', padding: '1px 4px', fontSize: '10px', fontWeight: 800 }}>
               {formatTime(timeLeft.minutes)}
             </div>
             <span style={{ color: 'var(--brand-pink)', fontSize: '10px', fontWeight: 900 }}>:</span>
             
-            <div style={{ background: '#fff', border: '1px solid #eaeaea', color: 'var(--brand-pink)', borderRadius: '4px', padding: '1px 4px', fontSize: '11px', fontWeight: 800 }}>
+            <div style={{ background: '#222', border: 'none', color: 'var(--brand-pink)', borderRadius: '4px', padding: '1px 4px', fontSize: '10px', fontWeight: 800 }}>
               {formatTime(timeLeft.seconds)}
             </div>
           </div>
         </div>
 
         {/* View All */}
-        <div style={{ color: 'var(--brand-pink)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+        <div 
+          onClick={() => saveScrollAndNavigate(navigate, '/market/flash-sale')}
+          style={{ color: 'var(--brand-pink)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', flexShrink: 0 }}
+        >
           View All <i className="las la-angle-right" style={{ fontSize: '14px' }}></i>
         </div>
       </div>
 
       {/* Product Row */}
-      <div className="no-scrollbar" style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '15px' }}>
-        {displayProducts.map((product) => (
+      <div style={{ position: 'relative' }}>
+        <div className="desktop-slider-arrow" style={{ left: '5px' }} onClick={scrollLeft}>
+          <i className="las la-angle-left"></i>
+        </div>
+        <div className="desktop-slider-arrow" style={{ right: '5px' }} onClick={scrollRight}>
+          <i className="las la-angle-right"></i>
+        </div>
+
+        <div ref={scrollRef} className="no-scrollbar" style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '15px', scrollBehavior: 'smooth' }}>
+          {displayProducts.map((product) => (
           <div key={product.id} style={{ minWidth: '110px', width: '110px', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
             
             {/* Image Box */}
@@ -211,6 +239,7 @@ const FlashSale = ({ category }) => {
 
           </div>
         ))}
+        </div>
       </div>
       </div>
 

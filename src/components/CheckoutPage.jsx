@@ -203,9 +203,19 @@ const CheckoutPage = () => {
                          <img src={item.image} alt={item.title} className="cart-item-image" />
                          <span className="item-badge">{item.quantity}</span>
                       </div>
-                      <div className="cart-item-details" style={{ flex: 1 }}>
-                        <div className="cart-item-title">{item.title}</div>
-                        <div className="cart-item-price">{displayPrice}</div>
+                      <div className="cart-item-details" style={{ flex: 1, paddingLeft: '12px' }}>
+                        <div className="cart-item-title" style={{ fontSize: '13px', fontWeight: '600', color: '#333' }}>{item.title}</div>
+                        <div className="cart-item-price" style={{ fontSize: '13px', color: '#E91E63', fontWeight: 'bold', marginTop: '2px' }}>{displayPrice}</div>
+                        {item.infoSections && item.infoSections.length > 0 && (
+                          <div style={{ marginTop: '8px', padding: '6px', background: '#f9f9f9', borderRadius: '4px', border: '1px dashed #eee' }}>
+                            {item.infoSections.map((sec, idx) => (
+                              <div key={idx} style={{ marginBottom: idx < item.infoSections.length - 1 ? '4px' : '0' }}>
+                                <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#555' }}>{sec.title}</div>
+                                <div style={{ fontSize: '10px', color: '#777', whiteSpace: 'pre-line', lineHeight: '1.3' }}>{sec.content}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div 
                         onClick={() => removeFromCart(item.id)} 

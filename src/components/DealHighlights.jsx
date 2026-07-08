@@ -1,4 +1,6 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { saveScrollAndNavigate } from '../utils/navigation';
 
 const comboDealProducts = [
   {
@@ -114,6 +116,8 @@ const comboDealProducts = [
 ];
 
 const DealHighlights = () => {
+  const navigate = useNavigate();
+
   return (
     <div style={{ padding: '0 15px', marginBottom: '15px' }}>
       <div style={{
@@ -130,22 +134,29 @@ const DealHighlights = () => {
           justifyContent: 'space-between', 
           alignItems: 'center', 
           padding: '12px 15px',
-          borderBottom: 'none'
+          background: '#111',
+          borderTopLeftRadius: '8px',
+          borderTopRightRadius: '8px'
         }}>
           
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                 <i className="las la-shopping-basket" style={{ color: 'var(--brand-pink)', fontSize: '24px' }}></i>
-                <span style={{ fontWeight: 900, fontSize: '16px', color: '#111', letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>Bangladesh Market</span>
+                 <i className="las la-shopping-basket" style={{ color: '#fff', fontSize: '24px' }}></i>
+                <span style={{ fontWeight: 900, fontSize: '16px', color: '#fff', letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>Bangladesh Market</span>
               </div>
             </div>
-            <div style={{ paddingLeft: '28px', fontSize: '10px', color: 'rgba(17, 17, 17, 0.4)', marginTop: '2px', fontWeight: 600 }}>
+            
+            {/* Delivery text */}
+            <div style={{ paddingLeft: '30px', fontSize: '10px', color: 'rgba(255, 255, 255, 0.7)', marginTop: '2px', fontWeight: 600 }}>
               Standard: 1-3 Days • Express (Dhaka): 24h
             </div>
           </div>
 
-          <div style={{ color: 'var(--brand-pink)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
+          <div 
+            onClick={() => saveScrollAndNavigate(navigate, '/market/bangladesh-market')}
+            style={{ color: 'var(--brand-pink)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
             View All <i className="las la-angle-right" style={{ fontSize: '14px' }}></i>
           </div>
         </div>

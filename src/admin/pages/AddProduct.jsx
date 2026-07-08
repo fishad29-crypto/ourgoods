@@ -1,29 +1,64 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, UploadCloud, X, Plus, Sparkles, Image as ImageIcon, Loader2, Trash2 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ArrowLeft, Save, UploadCloud, X, Plus, Sparkles, Image as ImageIcon, Loader2, Trash2, Bold, Italic, Underline, Link, List, ListOrdered, AlignLeft, Info } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import Tesseract from 'tesseract.js';
+import MediaManagerModal from '../../components/MediaManagerModal';
 import { addProductToFrontend } from '../../utils/MockData';
+import realProducts from '../../utils/realProducts.json';
 import '../admin.css';
 
 const AddProduct = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [images, setImages] = useState([]);
   const [isCompressing, setIsCompressing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [showMediaManager, setShowMediaManager] = useState(false);
   const [importUrl, setImportUrl] = useState('');
   const [formData, setFormData] = useState({
-    name: '', description: '', features: '',
+    name: '', ribbon: '', description: '', features: '',
+    infoSections: [],
     regularPrice: '', salePrice: '', costPrice: '',
-    sku: '', stock: '', colors: '', sizes: '',
+    sku: '', stock: '', attributes: [{ name: 'Color', options: '' }, { name: 'Size', options: '' }],
     category: '', subcategory: '', brand: '',
     vendor: 'OURGOODS Direct', type: 'Local Ready Stock',
     tags: '', weight: '', deliveryTime: '',
     returnPolicy: '7 Days Easy Return', status: 'Active',
     seoTitle: '', seoDescription: ''
   });
+  const [productType, setProductType] = useState('domestic');
   const fileInputRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const typeParam = params.get('type');
+    if (typeParam) {
+      setProductType(typeParam);
+    }
+    const editId = params.get('edit');
+    if (editId) {
+      const product = realProducts.find(p => p.id === editId);
+      if (product) {
+        setFormData(prev => ({
+          ...prev,
+          name: product.title || '',
+          regularPrice: product.originalPrice || product.price || '',
+          salePrice: product.price || '',
+          sku: `SKU-${product.id.split('_')[1] || product.id}`,
+          category: product.category || '',
+          attributes: [
+            { name: 'Color', options: (product.colors || []).join(', ') },
+            { name: 'Size', options: (product.sizes || []).join(', ') }
+          ]
+        }));
+        
+        const imgs = product.images && product.images.length > 0 ? product.images : (product.image ? [product.image] : []);
+        setImages(imgs.map(url => ({ name: 'product-image.jpg', url, isExisting: true })));
+      }
+    }
+  }, [location.search]);
 
   const categoryMap = {
     "Electronics": ["Mobiles", "Laptops", "Audio", "Smartwatches", "Accessories"],
@@ -46,6 +81,46 @@ const AddProduct = () => {
     });
   };
 
+  const handleAddAttribute = () => {
+    setFormData(prev => ({
+      ...prev,
+      attributes: [...(prev.attributes || []), { name: '', options: '' }]
+    }));
+  };
+
+  const handleRemoveAttribute = (index) => {
+    const updatedAttributes = formData.attributes.filter((_, i) => i !== index);
+    setFormData(prev => ({ ...prev, attributes: updatedAttributes }));
+  };
+
+  const handleAddInfoSection = () => {
+    setFormData(prev => ({
+      ...prev,
+      infoSections: [...(prev.infoSections || []), { title: '', content: '' }]
+    }));
+  };
+
+  const handleRemoveInfoSection = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      infoSections: (prev.infoSections || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleInfoSectionChange = (index, field, value) => {
+    const updatedSections = [...(formData.infoSections || [])];
+    updatedSections[index] = { ...updatedSections[index], [field]: value };
+    setFormData(prev => ({ ...prev, infoSections: updatedSections }));
+  };
+
+  const handleAttributeChange = (index, field, value) => {
+    setFormData(prev => {
+      const newAttr = [...prev.attributes];
+      newAttr[index] = { ...newAttr[index], [field]: value };
+      return { ...prev, attributes: newAttr };
+    });
+  };
+
   const formatSize = (bytes) => {
     if (!bytes || bytes === 0) return '0 B';
     const k = 1024;
@@ -55,7 +130,59 @@ const AddProduct = () => {
   };
 
   const handleImageUpload = () => {
-    if (fileInputRef.current) fileInputRef.current.click();
+    setShowMediaManager(true);
+  };
+
+  const handleMediaSelect = async (selectedItems) => {
+    setShowMediaManager(false);
+    if (!selectedItems || selectedItems.length === 0) return;
+
+    const localFiles = selectedItems.filter(item => item instanceof File);
+    const existingFiles = selectedItems.filter(item => !(item instanceof File));
+
+    if (existingFiles.length > 0) {
+      setImages(prev => [...prev, ...existingFiles]);
+    }
+
+    if (localFiles.length > 0) {
+      setIsCompressing(true);
+      const newImages = [];
+      const options = {
+        maxSizeMB: 0.5,
+        maxWidthOrHeight: 1200,
+        useWebWorker: true,
+        initialQuality: 0.8
+      };
+
+      for (const file of localFiles) {
+        if (file.type.startsWith('video/')) {
+          const url = URL.createObjectURL(file);
+          newImages.push({
+            name: file.name,
+            originalSize: file.size,
+            compressedSize: file.size,
+            url,
+            type: file.type
+          });
+        } else if (file.type.startsWith('image/')) {
+          try {
+            const compressedFile = await imageCompression(file, options);
+            const url = URL.createObjectURL(compressedFile);
+            newImages.push({
+              name: file.name,
+              originalSize: file.size,
+              compressedSize: compressedFile.size,
+              url,
+              type: file.type
+            });
+          } catch (error) {
+            console.error("Compression error:", error);
+          }
+        }
+      }
+      setImages(prev => [...prev, ...newImages]);
+      setIsCompressing(false);
+    }
   };
 
   const handleFileChange = async (e) => {
@@ -73,18 +200,29 @@ const AddProduct = () => {
     };
 
     for (const file of files) {
-      if (!file.type.startsWith('image/')) continue;
-      try {
-        const compressedFile = await imageCompression(file, options);
-        const url = URL.createObjectURL(compressedFile);
+      if (file.type.startsWith('video/')) {
+        const url = URL.createObjectURL(file);
         newImages.push({
           name: file.name,
           originalSize: file.size,
-          compressedSize: compressedFile.size,
-          url
+          compressedSize: file.size,
+          url,
+          type: file.type
         });
-      } catch (error) {
-        console.error("Compression error:", error);
+      } else if (file.type.startsWith('image/')) {
+        try {
+          const compressedFile = await imageCompression(file, options);
+          const url = URL.createObjectURL(compressedFile);
+          newImages.push({
+            name: file.name,
+            originalSize: file.size,
+            compressedSize: compressedFile.size,
+            url,
+            type: file.type
+          });
+        } catch (error) {
+          console.error("Compression error:", error);
+        }
       }
     }
 
@@ -237,8 +375,10 @@ const AddProduct = () => {
         costPrice: finalProduct.costPrice,
         sku: generatedSku,
         stock: (Math.floor(Math.random() * 80) + 20).toString(),
-        colors: finalProduct.colors || 'Custom',
-        sizes: 'S, M, L, XL',
+        attributes: [
+          { name: 'Color', options: finalProduct.colors || 'Custom' },
+          { name: 'Size', options: 'S, M, L, XL' }
+        ],
         category: finalProduct.category,
         subcategory: finalProduct.subcategory,
         tags: finalProduct.tags,
@@ -296,8 +436,10 @@ const AddProduct = () => {
         costPrice: imported.supplierPrice || "",
         sku: `OG-IMP-${Math.floor(Math.random() * 9000) + 1000}`,
         stock: "50",
-        colors: 'As shown in image',
-        sizes: 'Standard',
+        attributes: [
+          { name: 'Color', options: 'As shown in image' },
+          { name: 'Size', options: 'Standard' }
+        ],
         category: imported.category,
         subcategory: "Imported",
         tags: `imported, ${imported.vendor?.toLowerCase().replace(' ', '')}`,
@@ -360,7 +502,7 @@ const AddProduct = () => {
       setFormData({
         name: '', description: '', features: '',
         regularPrice: '', salePrice: '', costPrice: '',
-        sku: '', stock: '', colors: '', sizes: '',
+        sku: '', stock: '', attributes: [{ name: 'Color', options: '' }, { name: 'Size', options: '' }],
         category: '', subcategory: '', brand: '',
         vendor: 'OURGOODS Direct', type: 'Local Ready Stock',
         tags: '', weight: '', deliveryTime: '',
@@ -374,6 +516,11 @@ const AddProduct = () => {
 
   return (
     <div className="admin-content">
+      <MediaManagerModal 
+        show={showMediaManager}
+        onClose={() => setShowMediaManager(false)} 
+        onSelect={handleMediaSelect} 
+      />
       {/* Header */}
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -396,41 +543,80 @@ const AddProduct = () => {
         {/* Main Form Content */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
-          {/* Import via Link Section */}
+          {/* Product Type Selection */}
           <div className="form-section" style={{ backgroundColor: 'var(--admin-surface)', padding: '24px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Sparkles size={18} color="#8b5cf6" /> Auto-Import via Link
-              </h3>
-            </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <input 
-                type="text" 
-                className="form-input" 
-                placeholder="Paste link from Taobao, Pinduoduo, Daraz, Facebook, Instagram..." 
-                value={importUrl}
-                onChange={(e) => setImportUrl(e.target.value)}
-                style={{ flex: 1 }}
-              />
-              <button 
-                className="btn-primary" 
-                onClick={handleImport}
-                disabled={isImporting}
-                style={{ padding: '0 24px', display: 'flex', alignItems: 'center', gap: '8px', cursor: isImporting ? 'not-allowed' : 'pointer', opacity: isImporting ? 0.7 : 1 }}
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 600 }}>Select Product Type</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+              
+              <div 
+                onClick={() => setProductType('domestic')}
+                style={{ 
+                  padding: '16px', 
+                  border: productType === 'domestic' ? '2px solid var(--brand-pink)' : '1px solid var(--admin-border)', 
+                  borderRadius: '8px', 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '4px',
+                  backgroundColor: productType === 'domestic' ? '#fff0f6' : 'transparent',
+                  transition: 'all 0.2s'
+                }}
               >
-                {isImporting ? <Loader2 size={16} className="spin" /> : <UploadCloud size={16} />}
-                {isImporting ? 'Scraping Data...' : 'Import Data'}
-              </button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '700', color: productType === 'domestic' ? 'var(--brand-pink)' : 'var(--admin-text-main)' }}>Domestic / Inhouse / Vendor</span>
+                  {productType === 'domestic' && <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--brand-pink)' }}></div>}
+                </div>
+                <span style={{ fontSize: '12px', color: 'var(--admin-text-muted)' }}>Local stock and vendor items</span>
+              </div>
+              
+              <div 
+                onClick={() => setProductType('global')}
+                style={{ 
+                  padding: '16px', 
+                  border: productType === 'global' ? '2px solid var(--brand-pink)' : '1px solid var(--admin-border)', 
+                  borderRadius: '8px', 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '4px',
+                  backgroundColor: productType === 'global' ? '#fff0f6' : 'transparent',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '700', color: productType === 'global' ? 'var(--brand-pink)' : 'var(--admin-text-main)' }}>Global Product</span>
+                  {productType === 'global' && <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--brand-pink)' }}></div>}
+                </div>
+                <span style={{ fontSize: '12px', color: 'var(--admin-text-muted)' }}>International sourcing items</span>
+              </div>
+              
+              <div 
+                onClick={() => setProductType('factory')}
+                style={{ 
+                  padding: '16px', 
+                  border: productType === 'factory' ? '2px solid var(--brand-pink)' : '1px solid var(--admin-border)', 
+                  borderRadius: '8px', 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '4px',
+                  backgroundColor: productType === 'factory' ? '#fff0f6' : 'transparent',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '700', color: productType === 'factory' ? 'var(--brand-pink)' : 'var(--admin-text-main)' }}>Factory Product</span>
+                  {productType === 'factory' && <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: 'var(--brand-pink)' }}></div>}
+                </div>
+                <span style={{ fontSize: '12px', color: 'var(--admin-text-muted)' }}>Direct from factory bulk items</span>
+              </div>
+
             </div>
-            <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: 'var(--admin-text-muted)' }}>
-              Our AI scraper will automatically fetch the title, description, pricing, category, and variants from the provided supplier link.
-            </p>
           </div>
-          
+
           {/* Media */}
           <div className="form-section" style={{ backgroundColor: 'var(--admin-surface)', padding: '24px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Name: Product Picture</h3>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: isCompressing ? '12px' : '0' }}>
               {isCompressing && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#10b981', fontWeight: 600 }}>
                   <Loader2 size={14} className="spin" /> Compressing & Optimizing...
@@ -443,30 +629,45 @@ const AddProduct = () => {
               ref={fileInputRef} 
               style={{ display: 'none' }} 
               multiple 
-              accept="image/*" 
+              accept="image/*,video/*" 
               onChange={handleFileChange} 
             />
 
-            <div style={{ border: '2px dashed var(--admin-border)', borderRadius: '8px', padding: '40px', textAlign: 'center', cursor: 'pointer', marginBottom: '16px', backgroundColor: isCompressing ? 'var(--admin-bg)' : 'transparent', transition: 'background-color 0.2s' }} onClick={handleImageUpload}>
-              <UploadCloud size={32} color="var(--admin-text-muted)" style={{ margin: '0 auto 12px' }} />
-              <p style={{ margin: '0 0 8px', fontWeight: 500 }}>Click or drag images here to upload & auto-compress</p>
-              <p style={{ margin: 0, fontSize: '12px', color: 'var(--admin-text-muted)' }}>Supported formats: JPG, PNG, WEBP (Max 10MB). Images will be automatically compressed while maintaining clarity in one click!</p>
+            <div style={{ border: '2px dashed var(--admin-border)', borderRadius: '12px', padding: '32px 20px', textAlign: 'center', cursor: 'pointer', marginBottom: '20px', backgroundColor: isCompressing ? 'var(--admin-bg)' : '#fafafa', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }} onClick={handleImageUpload}>
+              <UploadCloud size={28} color="var(--brand-pink)" style={{ marginBottom: '12px' }} />
+              <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: '14px', color: '#333' }}>Upload Product Media</p>
+              <p style={{ margin: 0, fontSize: '12px', color: 'var(--admin-text-muted)' }}>Drag & drop or click to browse (JPG, PNG, WEBP, MP4)</p>
             </div>
 
             {images.length > 0 && (
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '12px' }}>
                 {images.map((img, idx) => (
-                  <div key={idx} style={{ width: '120px', backgroundColor: 'var(--admin-bg)', borderRadius: '8px', position: 'relative', border: '1px solid var(--admin-border)', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ width: '100%', height: '120px', borderTopLeftRadius: '8px', borderTopRightRadius: '8px', overflow: 'hidden', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {img.url ? <img src={img.url} alt="upload" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <ImageIcon size={24} color="#94a3b8" />}
-                    </div>
-                    <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <span style={{ fontSize: '10px', color: 'var(--status-danger)', textDecoration: 'line-through' }}>{formatSize(img.originalSize)}</span>
-                      <span style={{ fontSize: '11px', color: 'var(--status-success)', fontWeight: 600 }}>{formatSize(img.compressedSize)} (Saved {img.originalSize ? ((1 - img.compressedSize / img.originalSize) * 100).toFixed(0) : 0}%)</span>
-                    </div>
-                    <button onClick={() => removeImage(idx)} style={{ position: 'absolute', top: '-8px', right: '-8px', background: 'var(--status-danger)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                      <X size={14} />
+                  <div key={idx} style={{ aspectRatio: '1', backgroundColor: '#f1f5f9', borderRadius: '10px', position: 'relative', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                    {img.url ? (
+                      (img.type && img.type.startsWith('video/')) || img.url.match(/\.(mp4|webm|ogg)$/i) ? (
+                        <video src={img.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} autoPlay muted loop playsInline />
+                      ) : (
+                        <img src={img.url} alt="upload" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      )
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <ImageIcon size={20} color="#94a3b8" />
+                      </div>
+                    )}
+                    <button onClick={(e) => { e.stopPropagation(); removeImage(idx); }} style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)', padding: 0 }}>
+                      <X size={12} />
                     </button>
+                    <div style={{ position: 'absolute', bottom: '6px', left: '6px', right: '6px', display: 'flex', justifyContent: 'center' }}>
+                      {img.isExisting ? (
+                        <div style={{ background: 'rgba(16, 185, 129, 0.9)', color: '#fff', fontSize: '9px', fontWeight: 600, padding: '3px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '3px', backdropFilter: 'blur(2px)' }}>
+                          <Sparkles size={8} /> Auto-Compressed
+                        </div>
+                      ) : (
+                        <div style={{ background: 'rgba(16, 185, 129, 0.9)', color: '#fff', fontSize: '9px', fontWeight: 600, padding: '3px 6px', borderRadius: '4px', backdropFilter: 'blur(2px)' }}>
+                          {formatSize(img.compressedSize)}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -475,57 +676,112 @@ const AddProduct = () => {
 
           {/* General Information */}
           <div className="form-section" style={{ backgroundColor: 'var(--admin-surface)', padding: '24px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>General Information</h3>
-              <button 
-                className="btn-outline" 
-                onClick={handleAutoFill}
-                disabled={isGenerating}
-                style={{ padding: '6px 12px', fontSize: '12px', color: '#8b5cf6', borderColor: '#8b5cf6', display: 'flex', alignItems: 'center', cursor: isGenerating ? 'not-allowed' : 'pointer', opacity: isGenerating ? 0.7 : 1 }}
-              >
-                {isGenerating ? <Loader2 size={14} className="spin" style={{ marginRight: '6px' }} /> : <Sparkles size={14} style={{ marginRight: '6px' }} />}
-                {isGenerating ? 'Analyzing Image...' : 'Auto-fill with Gemini AI'}
-              </button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div className="form-group">
-                <label className="form-label">Product Name *</label>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '24px' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Name</label>
                 <input 
                   type="text" 
                   name="name"
                   className="form-input" 
-                  placeholder="e.g. Premium Cotton T-Shirt" 
+                  placeholder="e.g. Wooden Handle Scrub Brush" 
                   value={formData.name}
                   onChange={handleChange}
                 />
               </div>
-              <div className="form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label className="form-label">Product Description</label>
-                  <button style={{ background: 'none', border: 'none', color: '#8b5cf6', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-                    <Sparkles size={12} /> Generate Description
-                  </button>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  Ribbon <Info size={14} color="#888" />
+                </label>
+                <input 
+                  type="text" 
+                  name="ribbon"
+                  className="form-input" 
+                  placeholder="e.g., New Arrival" 
+                  value={formData.ribbon || ''}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '32px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label className="form-label" style={{ margin: 0 }}>Description</label>
+                <button 
+                  type="button"
+                  onClick={handleAutoFill}
+                  disabled={isGenerating}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: '#3b82f6', fontWeight: 500, cursor: 'pointer', padding: 0 }}
+                >
+                  <Sparkles size={16} /> {isGenerating ? 'Generating...' : 'Generate AI Text'}
+                </button>
+              </div>
+              
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#fff' }}>
+                <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb', gap: '20px', color: '#4b5563' }}>
+                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', display: 'flex' }}><Bold size={18} strokeWidth={2.5} /></button>
+                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', display: 'flex' }}><Italic size={18} strokeWidth={2.5} /></button>
+                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', display: 'flex' }}><Underline size={18} strokeWidth={2.5} /></button>
+                  <div style={{ width: '1px', height: '24px', backgroundColor: '#e5e7eb', margin: '0 -4px' }}></div>
+                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', display: 'flex' }}><AlignLeft size={18} strokeWidth={2.5} /></button>
+                  <div style={{ width: '1px', height: '24px', backgroundColor: '#e5e7eb', margin: '0 -4px' }}></div>
+                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', display: 'flex' }}><Link size={18} strokeWidth={2.5} /></button>
+                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', display: 'flex' }}><List size={18} strokeWidth={2.5} /></button>
+                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', display: 'flex' }}><ListOrdered size={18} strokeWidth={2.5} /></button>
                 </div>
                 <textarea 
                   name="description"
-                  className="form-input" 
-                  rows="5" 
-                  placeholder="Write a detailed product description..."
+                  style={{ width: '100%', border: 'none', padding: '16px', resize: 'vertical', outline: 'none', fontSize: '14px', minHeight: '120px', backgroundColor: '#fff' }}
+                  placeholder="Compact scrub brush with a smooth wooden handle..."
                   value={formData.description}
                   onChange={handleChange}
                 ></textarea>
               </div>
-              <div className="form-group">
-                <label className="form-label">Key Features (Bullet points)</label>
-                <textarea 
-                  name="features"
-                  className="form-input" 
-                  rows="3" 
-                  placeholder="e.g. 100% Cotton\nComfortable fit\nMachine washable"
-                  value={formData.features}
-                  onChange={handleChange}
-                ></textarea>
-              </div>
+            </div>
+            
+            <hr style={{ border: 'none', borderTop: '1px solid var(--admin-border)', margin: '24px -24px 24px -24px' }} />
+
+            <div>
+              <h4 style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 600, letterSpacing: '1px', color: '#475569', textTransform: 'uppercase' }}>Additional Info Sections</h4>
+              <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#64748b' }}>Share information like return policy or care instructions with your customers.</p>
+              
+              {(formData.infoSections || []).map((section, idx) => (
+                <div key={idx} style={{ border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '16px', marginBottom: '16px', backgroundColor: '#fff' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      style={{ width: '50%', fontWeight: 600, margin: 0, padding: '8px 12px' }} 
+                      placeholder="Info Section Title" 
+                      value={section.title} 
+                      onChange={(e) => handleInfoSectionChange(idx, 'title', e.target.value)} 
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => handleRemoveInfoSection(idx)} 
+                      style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                  <textarea 
+                    className="form-input" 
+                    rows="3" 
+                    style={{ margin: 0 }}
+                    placeholder="Enter info section details..." 
+                    value={section.content} 
+                    onChange={(e) => handleInfoSectionChange(idx, 'content', e.target.value)}
+                  ></textarea>
+                </div>
+              ))}
+
+              <button 
+                type="button"
+                onClick={handleAddInfoSection}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: '#3b82f6', fontWeight: 500, cursor: 'pointer', padding: 0 }}
+              >
+                <Plus size={16} /> Add an Info Section
+              </button>
             </div>
           </div>
 
@@ -568,17 +824,35 @@ const AddProduct = () => {
           {/* Variants */}
           <div className="form-section" style={{ backgroundColor: 'var(--admin-surface)', padding: '24px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Variants (Size, Color, Material)</h3>
-              <button className="btn-outline" style={{ padding: '6px 12px', fontSize: '12px' }}><Plus size={14} /> Add Variant</button>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Variants / Attributes</h3>
+              <button className="btn-outline" onClick={handleAddAttribute} style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}><Plus size={14} /> Add Variant</button>
             </div>
-            <div className="form-group">
-              <label className="form-label">Colors</label>
-              <input type="text" name="colors" className="form-input" placeholder="e.g. Red, Blue, Black (comma separated)" value={formData.colors} onChange={handleChange} />
-            </div>
-            <div className="form-group" style={{ marginTop: '16px' }}>
-              <label className="form-label">Sizes</label>
-              <input type="text" name="sizes" className="form-input" placeholder="e.g. S, M, L, XL (comma separated)" value={formData.sizes} onChange={handleChange} />
-            </div>
+            
+            {(formData.attributes || []).map((attr, idx) => (
+              <div key={idx} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '16px', background: 'var(--admin-bg)', padding: '12px', borderRadius: '8px' }}>
+                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '12px' }}>Attribute Name (e.g., Color, Model, ML)</label>
+                  <input type="text" className="form-input" placeholder="Name" value={attr.name} onChange={(e) => handleAttributeChange(idx, 'name', e.target.value)} />
+                </div>
+                <div className="form-group" style={{ flex: 2, marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '12px' }}>Options (Comma separated)</label>
+                  <input type="text" className="form-input" placeholder="e.g. Red, Blue, Green" value={attr.options} onChange={(e) => handleAttributeChange(idx, 'options', e.target.value)} />
+                </div>
+                <button 
+                  className="icon-btn" 
+                  onClick={() => handleRemoveAttribute(idx)}
+                  style={{ marginTop: '24px', color: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)' }}
+                  title="Remove Attribute"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+            {(!formData.attributes || formData.attributes.length === 0) && (
+              <div style={{ textAlign: 'center', padding: '20px', color: '#888', fontSize: '14px', background: 'var(--admin-bg)', borderRadius: '8px' }}>
+                No variants added. Click "Add Variant" to allow buyers to select options.
+              </div>
+            )}
           </div>
 
         </div>

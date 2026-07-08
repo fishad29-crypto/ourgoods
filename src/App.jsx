@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { ShoppingBag } from 'lucide-react';
 import CustomerApp from './CustomerApp';
+import MaintenancePage from './components/MaintenancePage';
 import ProductDetailsPage from './components/ProductDetailsPage';
 import ReviewsPage from './components/ReviewsPage';
 import CheckoutPage from './components/CheckoutPage';
+import OurgoodsDirectPage from './components/OurgoodsDirectPage';
+import MarketPage from './components/MarketPage';
 import AdminLayout from './admin/AdminLayout';
 
 // Admin Pages
@@ -11,6 +15,7 @@ import AdminLogin from './admin/pages/AdminLogin';
 import DashboardHome from './admin/pages/DashboardHome';
 import Orders from './admin/pages/Orders';
 import ProductsCatalog from './admin/pages/ProductsCatalog';
+import Categories from './admin/pages/Categories';
 import AddProduct from './admin/pages/AddProduct';
 import OurgoodsDirect from './admin/pages/OurgoodsDirect';
 import VendorManagement from './admin/pages/VendorManagement';
@@ -35,6 +40,8 @@ import WishlistPage from './components/WishlistPage';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(localStorage.getItem('siteMaintenance') === 'true');
+  const location = useLocation();
 
   useEffect(() => {
     // Check if we just loaded the page
@@ -50,12 +57,46 @@ function App() {
     }
   }, []);
 
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'siteMaintenance') {
+        setIsMaintenanceMode(e.newValue === 'true');
+      }
+    };
+    
+    const checkMaintenanceInterval = setInterval(() => {
+      setIsMaintenanceMode(localStorage.getItem('siteMaintenance') === 'true');
+    }, 1000);
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(checkMaintenanceInterval);
+    };
+  }, []);
+
   if (isLoading) {
     return (
       <div style={{ height: '100vh', width: '100vw', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#ffffff', position: 'fixed', top: 0, left: 0, zIndex: 99999 }}>
-        <img src="/images/logo.png" alt="Ourgoods Logo" className="floating-logo" style={{ maxWidth: '300px', height: 'auto' }} />
+        <div className="floating-logo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <ShoppingBag size={48} color="#E43292" />
+            <h1 style={{ color: '#E43292', fontSize: '40px', fontWeight: '900', margin: 0, letterSpacing: '1px', fontFamily: 'Inter, sans-serif' }}>OURGOODS</h1>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px' }}>
+            <div style={{ height: '1px', width: '60px', backgroundColor: '#fca5a5' }}></div>
+            <p style={{ color: '#E43292', fontSize: '13px', margin: 0, fontWeight: '700', letterSpacing: '2px', fontFamily: 'Inter, sans-serif' }}>YOUR DESIRE, WE DELIVER</p>
+            <div style={{ height: '1px', width: '60px', backgroundColor: '#fca5a5' }}></div>
+          </div>
+        </div>
       </div>
     );
+  }
+
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
+  if (isMaintenanceMode && !isAdminRoute) {
+    return <MaintenancePage />;
   }
 
   return (
@@ -65,6 +106,8 @@ function App() {
       <Route path="/product/:id/reviews" element={<ReviewsPage />} />
       <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/wishlist" element={<WishlistPage />} />
+      <Route path="/ourgoods-direct" element={<OurgoodsDirectPage />} />
+      <Route path="/market/:marketType" element={<MarketPage />} />
       
       <Route path="/admin/login" element={<AdminLogin />} />
       
@@ -72,6 +115,7 @@ function App() {
         <Route index element={<DashboardHome />} />
         <Route path="orders" element={<Orders />} />
         <Route path="products" element={<ProductsCatalog />} />
+        <Route path="categories" element={<Categories />} />
         <Route path="products/add" element={<AddProduct />} />
         <Route path="ourgoods-direct" element={<OurgoodsDirect />} />
         <Route path="vendors" element={<VendorManagement />} />

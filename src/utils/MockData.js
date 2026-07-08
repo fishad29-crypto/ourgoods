@@ -65,7 +65,7 @@ export const getAllProducts = () => {
   }
 
   // Evaluate choice logic for the real products
-  let products = realProducts.map(product => {
+  let products = realProducts.map((product, index) => {
       // Setup base metrics
       const returnRate = parseFloat((Math.random() * 8).toFixed(1)); // 0 to 8%
       const cancellationRate = parseFloat((Math.random() * 5).toFixed(1)); // 0 to 5%
@@ -74,9 +74,15 @@ export const getAllProducts = () => {
       const priceCompetitiveness = randomInt(40, 100);
       const qualityScore = randomInt(50, 100);
       const stock = randomInt(0, 500);
+      
+      const newDiscount = randomChoice([15, 20, 30]);
+      const newOriginalPrice = Math.ceil(product.price / (1 - (newDiscount / 100)));
 
       const enhancedProduct = {
           ...product,
+          discount: newDiscount,
+          originalPrice: newOriginalPrice,
+          vendor: index % 3 === 0 ? 'OURGOODS Direct' : (product.vendor || 'OURGOODS Store'),
           returnRate,
           cancellationRate,
           sellerPerformance,
@@ -167,7 +173,15 @@ export const addProductToFrontend = (productData) => {
     createdAt: Date.now() + 100000, // Very fresh so it appears first in New Arrivals
     isChoice: true,
     choiceScore: 100,
-    choiceReason: 'New manually added product'
+    choiceReason: 'New manually added product',
+    attributes: Array.isArray(productData.attributes) 
+      ? productData.attributes
+          .filter(attr => attr.name && attr.options)
+          .map(attr => ({
+            name: attr.name,
+            options: attr.options.split(',').map(s => s.trim()).filter(Boolean)
+          }))
+      : []
   };
 
   if (newProduct.originalPrice > newProduct.price) {

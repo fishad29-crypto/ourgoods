@@ -17,6 +17,7 @@ const ProductCard = ({ product }) => {
     <div className="product-card-hover" style={{
       width: '100%',
       background: '#fff',
+      border: '1px solid #eaeaea',
       borderRadius: '8px',
       overflow: 'hidden',
       position: 'relative',

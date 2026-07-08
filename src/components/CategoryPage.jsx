@@ -7,7 +7,7 @@ import BestSeller from './BestSeller';
 import ProductCard from './ProductCard';
 
 const categoryProducts = {
-  'Women': [
+  'Apparels': [
     { id: 1, title: 'Summer Floral Maxi Dress with Ruffles', image: 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&q=90&w=400', price: 1850, discount: 25, soldCount: 4200 },
     { id: 2, title: 'Classic High-Waist Denim Jeans', image: 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&q=90&w=400', price: 2100, discount: 15, soldCount: 8500 },
     { id: 3, title: 'Elegant Evening Gown for Parties', image: 'https://images.unsplash.com/photo-1566160980424-df3a093226db?auto=format&fit=crop&q=90&w=400', price: 4500, discount: 40, soldCount: 1200 },
@@ -77,7 +77,7 @@ const CategoryPage = ({ title }) => {
           <i className="las la-tshirt" style={{ color: 'var(--brand-pink)', fontSize: '22px' }}></i> All {title}
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
-          {(categoryProducts[title] || categoryProducts['Women']).map(product => (
+          {(categoryProducts[title] || categoryProducts['Apparels']).map(product => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>

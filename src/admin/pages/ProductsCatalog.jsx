@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { productsData } from '../mockData';
+import realProducts from '../../utils/realProducts.json';
 import { Search, Filter, Plus, Edit, Trash2, Image as ImageIcon, X, UploadCloud, Download } from 'lucide-react';
 
 const ProductsCatalog = () => {
@@ -9,7 +9,22 @@ const ProductsCatalog = () => {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [showBulkModal, setShowBulkModal] = useState(false);
 
-  const filteredProducts = productsData.filter(product => {
+  // Map real products to catalog format
+  const catalogData = realProducts.map(p => ({
+    id: p.id,
+    name: p.title,
+    brand: 'Ourgoods',
+    sku: `SKU-${p.id.split('_')[1] || p.id}`,
+    category: p.category || 'Uncategorized',
+    vendor: 'Ourgoods Direct',
+    type: 'Local Stock',
+    price: p.price,
+    stock: 100, // mock stock
+    status: 'Active',
+    image: p.image
+  }));
+
+  const filteredProducts = catalogData.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           product.sku.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'All' || product.category === categoryFilter;
@@ -19,10 +34,13 @@ const ProductsCatalog = () => {
   return (
     <div className="admin-content">
       <div className="page-header">
-        <h2 className="page-title">Products & Catalog</h2>
+        <h2 className="page-title">Products & Catalog ({realProducts.length})</h2>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button className="btn-outline" onClick={() => setShowBulkModal(true)}>Bulk Upload</button>
-          <button className="btn-primary" onClick={() => navigate('/admin/products/add')}><Plus size={18} /> Add Product</button>
+          
+          <button className="btn-primary" onClick={() => navigate('/admin/products/add')}>
+            <Plus size={18} /> Add Product
+          </button>
         </div>
       </div>
 
@@ -116,7 +134,7 @@ const ProductsCatalog = () => {
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button className="icon-btn" title="Edit"><Edit size={18} /></button>
+                      <button className="icon-btn" title="Edit" onClick={() => navigate(`/admin/products/add?edit=${product.id}`)}><Edit size={18} /></button>
                       <button className="icon-btn" title="Delete" style={{ color: 'var(--status-danger)' }}><Trash2 size={18} /></button>
                     </div>
                   </td>
@@ -134,7 +152,7 @@ const ProductsCatalog = () => {
         
         {/* Pagination placeholder */}
         <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--admin-border)' }}>
-          <span style={{ fontSize: '13px', color: 'var(--admin-text-muted)' }}>Showing {filteredProducts.length} of {productsData.length} entries</span>
+          <span style={{ fontSize: '13px', color: 'var(--admin-text-muted)' }}>Showing {filteredProducts.length} of {catalogData.length} entries</span>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button className="btn-outline" style={{ padding: '6px 12px' }}>Previous</button>
             <button className="btn-outline" style={{ padding: '6px 12px' }}>Next</button>

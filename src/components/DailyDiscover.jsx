@@ -7,13 +7,13 @@ import { generateProducts } from '../utils/MockData';
 const dailyDiscoverCache = {};
 
 const TABS = [
-  { label: 'For You', icon: <i className="las la-heart" style={{ fontSize: '16px', color: 'var(--brand-pink)' }}></i> },
-  { label: 'Combo Deals', icon: <i className="las la-layer-group" style={{ fontSize: '16px' }}></i> },
-  { label: 'Choice', icon: <i className="las la-award" style={{ fontSize: '16px' }}></i> },
+  { label: 'All Products', icon: <i className="las la-shopping-bag" style={{ fontSize: '16px', color: 'var(--brand-pink)' }}></i> },
+  { label: 'Combo & Choice', icon: <i className="las la-gift" style={{ fontSize: '18px', color: 'var(--brand-pink)' }}></i> },
+  { label: 'Cash on Delivery', icon: <i className="las la-money-bill-wave" style={{ fontSize: '16px' }}></i> },
   { label: 'New Arrival', icon: <i className="las la-star" style={{ fontSize: '16px' }}></i> },
-  { label: 'Best Seller', icon: <i className="las la-trophy" style={{ fontSize: '16px' }}></i> },
-  { label: 'QuickShip (24h)', icon: <i className="las la-bolt" style={{ fontSize: '16px' }}></i> },
-  { label: 'International', icon: <i className="las la-globe-americas" style={{ fontSize: '16px' }}></i> }
+  { label: 'Flash Sale', icon: <i className="las la-bolt" style={{ fontSize: '16px' }}></i> },
+  { label: 'Global Shop', icon: <i className="las la-globe" style={{ fontSize: '16px' }}></i> },
+  { label: 'Factory Direct', icon: <i className="las la-industry" style={{ fontSize: '16px' }}></i> }
 ];
 
 const TabPage = ({ tabLabel }) => {
@@ -24,7 +24,7 @@ const TabPage = ({ tabLabel }) => {
     if (dailyDiscoverCache[tabLabel]) {
       setProducts(dailyDiscoverCache[tabLabel]);
     } else {
-      const newProducts = generateProducts(tabLabel === 'For You' ? 'recommended' : tabLabel, 50);
+      const newProducts = generateProducts(tabLabel === 'All Products' ? 'recommended' : tabLabel, 50);
       dailyDiscoverCache[tabLabel] = newProducts;
       setProducts(newProducts);
     }
@@ -33,7 +33,7 @@ const TabPage = ({ tabLabel }) => {
   const loadMore = () => {
     setLoading(true);
     setTimeout(() => {
-      const moreProducts = generateProducts(tabLabel === 'For You' ? 'recommended' : tabLabel, 10);
+      const moreProducts = generateProducts(tabLabel === 'All Products' ? 'recommended' : tabLabel, 10);
       const updatedProducts = [...products, ...moreProducts];
       dailyDiscoverCache[tabLabel] = updatedProducts;
       setProducts(updatedProducts);
@@ -68,7 +68,7 @@ const TabPage = ({ tabLabel }) => {
 };
 
 const DailyDiscover = () => {
-  const [activeTab, setActiveTab] = useState('For You');
+  const [activeTab, setActiveTab] = useState('All Products');
   const [isSticky, setIsSticky] = useState(false);
   const sentinelRef = useRef(null);
   const scrollRef = useRef(null);
@@ -178,20 +178,20 @@ const DailyDiscover = () => {
   };
 
   return (
-    <div style={{ padding: '10px 8px', background: '#fdf2f7' }}>
+    <div style={{ padding: '10px 8px 0 8px', background: '#fff' }}>
 
       <div ref={sentinelRef} style={{ height: '1px', width: '100%' }}></div>
       {/* Product Filter Tabs */}
       {/* Product Filter Tabs - Segmented Design */}
       <div className="no-scrollbar" style={{ display: 'flex', overflowX: 'auto', marginBottom: '15px', paddingBottom: '5px', paddingLeft: '8px', paddingRight: '8px', opacity: isSticky ? 0 : 1, pointerEvents: isSticky ? 'none' : 'auto' }}>
-        <div style={{ display: 'flex', border: '1px solid #eaeaea', borderRadius: '6px', background: '#fdf2f7', minWidth: 'max-content', alignItems: 'stretch' }}>
+        <div style={{ display: 'flex', border: '1px solid #eaeaea', borderRadius: '6px', background: '#f5f5f5', minWidth: '100%', alignItems: 'stretch' }}>
           {TABS.map((tab, idx, arr) => (
             <div key={idx} 
               ref={el => tabRefs.current[tab.label] = el}
               onClick={() => handleTabClick(tab.label)}
               style={{
               position: 'relative',
-              background: activeTab === tab.label ? '#000' : '#fdf2f7',
+              background: activeTab === tab.label ? '#000' : '#f5f5f5',
               color: activeTab === tab.label ? '#fff' : '#111',
               padding: '10px 18px',
               fontSize: '13px',
@@ -199,6 +199,8 @@ const DailyDiscover = () => {
               whiteSpace: 'nowrap',
               cursor: 'pointer',
               display: 'flex',
+              flex: 1,
+              justifyContent: 'center',
               alignItems: 'center',
               gap: '6px',
               borderRight: idx !== arr.length - 1 ? '1px solid #eaeaea' : 'none',

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ShoppingBag } from 'lucide-react';
 import { useCart } from './context/CartContext';
 import { useWishlist } from './context/WishlistContext';
 import './index.css';
@@ -11,6 +12,7 @@ import ReviewPage from './components/ReviewPage';
 import MessagePage from './components/MessagePage';
 import ProfilePage from './components/ProfilePage';
 import NewUserPromoModal from './components/NewUserPromoModal';
+import { allCategories } from './components/AllCategorySection';
 
 const searchSuggestions = [
   "summer dresses",
@@ -23,7 +25,7 @@ const searchSuggestions = [
   "home decor"
 ];
 
-const categories = ['Home', 'Women', 'Jewelry & Accessories', 'Purse & Bags', 'Sneakers & Shoes', 'Beauty & Health', 'Home & Decor'];
+const categories = ['Home', ...allCategories.map(c => c.name)];
 
 function CustomerApp() {
   const navigate = useNavigate();
@@ -43,7 +45,7 @@ function CustomerApp() {
   });
 
   const [showDailyDiscoverTabs, setShowDailyDiscoverTabs] = useState(false);
-  const [dailyDiscoverActiveTab, setDailyDiscoverActiveTab] = useState('For You');
+  const [dailyDiscoverActiveTab, setDailyDiscoverActiveTab] = useState('All Products');
 
   useEffect(() => {
     const handleDailyDiscoverSticky = (e) => {
@@ -171,10 +173,30 @@ function CustomerApp() {
           });
         }
         
-        // Force scroll to absolute top on load/refresh for Home page
-        window.scrollTo(0, 0);
+        // Restore or reset scroll
+        const savedWindowScroll = sessionStorage.getItem('savedScrollY');
+        const savedSwipeScroll = sessionStorage.getItem('savedSwipePageScrollY');
+        
+        if (savedWindowScroll !== null) {
+          const scrollY = parseInt(savedWindowScroll, 10);
+          window.scrollTo(0, scrollY);
+          setTimeout(() => window.scrollTo(0, scrollY), 300); // Retry after render
+          sessionStorage.removeItem('savedScrollY');
+        } else {
+          window.scrollTo(0, 0);
+        }
+
         const swipePages = document.querySelectorAll('.swipe-page');
-        swipePages.forEach(page => page.scrollTop = 0);
+        if (savedSwipeScroll !== null) {
+          const scrollY = parseInt(savedSwipeScroll, 10);
+          swipePages.forEach(page => page.scrollTop = scrollY);
+          setTimeout(() => {
+            document.querySelectorAll('.swipe-page').forEach(page => page.scrollTop = scrollY);
+          }, 300); // Retry after render
+          sessionStorage.removeItem('savedSwipePageScrollY');
+        } else {
+          swipePages.forEach(page => page.scrollTop = 0);
+        }
         
       }, 50);
     }
@@ -263,7 +285,8 @@ function CustomerApp() {
             {/* Left Group: Logo and Location */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexShrink: 0 }}>
               {/* Logo */}
-              <div className="hide-on-mobile" onClick={() => { navigate('/'); handleTabClick(0); }} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', cursor: 'pointer' }}>
+              <div className="hide-on-mobile" onClick={() => { navigate('/'); handleTabClick(0); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <ShoppingBag size={28} color="#fff" />
                 <h1 style={{ color: '#fff', fontWeight: 800, fontSize: '24px', margin: 0, letterSpacing: '1px', fontFamily: 'Outfit, sans-serif' }}>OURGOODS</h1>
               </div>
               
@@ -379,7 +402,7 @@ function CustomerApp() {
               onClick={() => setActiveNav('Profile')}
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', flexShrink: 0 }}>
               <i className="lar la-user" style={{ fontSize: '20px', marginBottom: '-2px' }}></i>
-              <span style={{ fontSize: '9px', fontWeight: '700' }}>Profile</span>
+              <span style={{ fontSize: '9px', fontWeight: '700' }}>Login / Sign Up</span>
             </div>
 
           </div>
@@ -387,7 +410,7 @@ function CustomerApp() {
 
         {/* Bottom Nav Bar (Very Light Pink) */}
         {activeNav === 'Home' && (
-          <div style={{ background: '#fdf2f7', borderBottom: '1px solid #f9e1ec' }}>
+          <div style={{ background: '#ffffff', borderBottom: '1px solid #eaeaea' }}>
             <div className="content-container" style={{ display: 'flex', alignItems: 'stretch' }}>
             
             {/* Sticky Category Button */}
@@ -422,15 +445,15 @@ function CustomerApp() {
             {/* Dynamic Swipeable Categories (Desktop & Mobile) */}
             {showDailyDiscoverTabs ? (
               <div id="daily-discover-scroll" className="no-scrollbar" style={{ flex: 1, display: 'flex', overflowX: 'auto', alignItems: 'center', padding: '0 15px', scrollBehavior: 'smooth' }}>
-                <div style={{ display: 'flex', border: '1px solid #eaeaea', borderRadius: '6px', background: '#fdf2f7', minWidth: 'max-content', alignItems: 'stretch' }}>
+                <div style={{ display: 'flex', border: '1px solid #eaeaea', borderRadius: '6px', background: '#f5f5f5', minWidth: 'max-content', alignItems: 'stretch' }}>
                   {[
-                    { label: 'For You', icon: <i className="las la-heart" style={{ fontSize: '16px', color: 'var(--brand-pink)' }}></i> },
-                    { label: 'Combo Deals', icon: <i className="las la-layer-group" style={{ fontSize: '16px' }}></i> },
-                    { label: 'Choice', icon: <i className="las la-award" style={{ fontSize: '16px' }}></i> },
+                    { label: 'All Products', icon: <i className="las la-shopping-bag" style={{ fontSize: '16px', color: 'var(--brand-pink)' }}></i> },
+                    { label: 'Combo & Choice', icon: <i className="las la-gift" style={{ fontSize: '18px', color: 'var(--brand-pink)' }}></i> },
+                    { label: 'Cash on Delivery', icon: <i className="las la-money-bill-wave" style={{ fontSize: '16px' }}></i> },
                     { label: 'New Arrival', icon: <i className="las la-star" style={{ fontSize: '16px' }}></i> },
-                    { label: 'Best Seller', icon: <i className="las la-trophy" style={{ fontSize: '16px' }}></i> },
-                    { label: 'QuickShip (24h)', icon: <i className="las la-bolt" style={{ fontSize: '16px' }}></i> },
-                    { label: 'International', icon: <i className="las la-globe-americas" style={{ fontSize: '16px' }}></i> }
+                    { label: 'Flash Sale', icon: <i className="las la-bolt" style={{ fontSize: '16px' }}></i> },
+                    { label: 'Global Shop', icon: <i className="las la-globe" style={{ fontSize: '16px' }}></i> },
+                    { label: 'Factory Direct', icon: <i className="las la-industry" style={{ fontSize: '16px' }}></i> }
                   ].map((tab, idx, arr) => (
                     <div 
                       key={idx} 
@@ -440,7 +463,7 @@ function CustomerApp() {
                       window.dispatchEvent(new CustomEvent('setDailyDiscoverTab', { detail: tab.label }));
                     }} style={{ 
                       position: 'relative',
-                      background: dailyDiscoverActiveTab === tab.label ? '#000' : '#fdf2f7',
+                      background: dailyDiscoverActiveTab === tab.label ? '#000' : '#f5f5f5',
                       color: dailyDiscoverActiveTab === tab.label ? '#fff' : '#111',
                       padding: '8px 16px',
                       fontSize: '12px',
@@ -448,6 +471,8 @@ function CustomerApp() {
                       whiteSpace: 'nowrap',
                       cursor: 'pointer',
                       display: 'flex',
+                      flex: 1,
+                      justifyContent: 'center',
                       alignItems: 'center',
                       gap: '6px',
                       borderRight: idx !== arr.length - 1 ? '1px solid #eaeaea' : 'none',
@@ -472,11 +497,10 @@ function CustomerApp() {
               </div>
             ) : (
               <div id="category-scroll" className="no-scrollbar" style={{ flex: 1, display: 'flex', overflowX: 'auto', alignItems: 'center', padding: '0 15px', scrollBehavior: 'smooth' }}>
-                  <div style={{ display: 'flex', border: '1px solid #eaeaea', borderRadius: '6px', background: '#fdf2f7', minWidth: 'max-content', alignItems: 'stretch' }}>
+                  <div style={{ display: 'flex', border: '1px solid #eaeaea', borderRadius: '6px', background: '#f5f5f5', minWidth: 'max-content', alignItems: 'stretch' }}>
                     {categories.map((cat, idx, arr) => (
                       <div 
                         key={idx}
-                        className="desktop-nav-py"
                         ref={el => tabRefs.current[idx] = el}
                         onClick={() => {
                           handleTabClick(idx);
@@ -484,7 +508,7 @@ function CustomerApp() {
                         }}
                         style={{ 
                           position: 'relative',
-                          background: activeTab === idx ? '#000' : '#fdf2f7',
+                          background: activeTab === idx ? '#000' : '#f5f5f5',
                           color: activeTab === idx ? '#fff' : '#111', 
                           padding: '8px 16px',
                           fontSize: '12px',
@@ -498,13 +522,11 @@ function CustomerApp() {
                           borderRadius: activeTab === idx ? '5px' : '0',
                         }}
                       >
-                        {cat === 'Home' && <i className="las la-home" style={{ fontSize: '16px', color: activeTab === idx ? '#fff' : '#111' }}></i>}
-                        {cat === 'Women' && <i className="las la-female" style={{ fontSize: '16px', color: activeTab === idx ? '#fff' : '#111' }}></i>}
-                        {cat === 'Jewelry & Accessories' && <i className="las la-gem" style={{ fontSize: '16px', color: activeTab === idx ? '#fff' : '#111' }}></i>}
-                        {cat === 'Purse & Bags' && <i className="las la-shopping-bag" style={{ fontSize: '16px', color: activeTab === idx ? '#fff' : '#111' }}></i>}
-                        {cat === 'Sneakers & Shoes' && <i className="las la-shoe-prints" style={{ fontSize: '16px', color: activeTab === idx ? '#fff' : '#111' }}></i>}
-                        {cat === 'Beauty & Health' && <i className="las la-spa" style={{ fontSize: '16px', color: activeTab === idx ? '#fff' : '#111' }}></i>}
-                        {cat === 'Home & Decor' && <i className="las la-couch" style={{ fontSize: '16px', color: activeTab === idx ? '#fff' : '#111' }}></i>}
+                        {cat === 'Home' ? (
+                          <i className="las la-home" style={{ fontSize: '16px', color: activeTab === idx ? '#fff' : '#111' }}></i>
+                        ) : (
+                          <i className={allCategories.find(c => c.name === cat)?.icon || 'las la-box'} style={{ fontSize: '16px', color: activeTab === idx ? '#fff' : '#111' }}></i>
+                        )}
                         {cat}
                         {activeTab === idx && (
                           <div style={{
@@ -544,6 +566,7 @@ function CustomerApp() {
           ref={scrollRef}
           onScroll={handleScroll}
           className="swipe-container no-scrollbar"
+          style={{ overflowX: showDailyDiscoverTabs ? 'hidden' : 'auto' }}
         >
           {categories.map((cat, idx) => (
             <div key={idx} className="swipe-page">
@@ -614,7 +637,7 @@ function CustomerApp() {
           </a>
           <a href="#" onClick={(e) => { e.preventDefault(); setActiveNav('Profile'); }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#fff', gap: '2px', textDecoration: 'none' }}>
             <i className={activeNav === 'Profile' ? 'las la-user-circle' : 'las la-user'} style={{ fontSize: '22px', transform: activeNav === 'Profile' ? 'scale(1.15) translateY(-2px)' : 'scale(1)', transition: 'all 0.2s ease' }}></i>
-            <span style={{ fontSize: '9px', fontWeight: activeNav === 'Profile' ? 800 : 600 }}>Profile</span>
+            <span style={{ fontSize: '9px', fontWeight: activeNav === 'Profile' ? 800 : 600 }}>Login / Sign Up</span>
           </a>
           </div>
         </nav>
