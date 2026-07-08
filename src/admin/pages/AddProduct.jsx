@@ -1230,23 +1230,24 @@ const AddProduct = () => {
                   </div>
                 );
               })}
-              
-              <div style={{ marginTop: '4px', paddingTop: '12px' }}>
-                <button 
-                  type="button" 
-                  onClick={() => {
-                    const newCat = window.prompt("Enter new category name:");
-                    if (newCat && newCat.trim() && !categories[newCat.trim()]) {
-                      setCategories(prev => ({ ...prev, [newCat.trim()]: [] }));
-                    }
-                  }}
-                  style={{ color: 'var(--brand-pink)', background: 'none', border: 'none', padding: 0, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }} 
-                  onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'} 
-                  onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}
-                >
-                  + Create Category
-                </button>
-              </div>
+            </div>
+            
+            {/* Sticky Create Button */}
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+              <button 
+                type="button" 
+                onClick={() => {
+                  const newCat = window.prompt("Enter new category name:");
+                  if (newCat && newCat.trim() && !categories[newCat.trim()]) {
+                    setCategories(prev => ({ ...prev, [newCat.trim()]: [] }));
+                  }
+                }}
+                style={{ color: 'var(--brand-pink)', background: 'none', border: 'none', padding: 0, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }} 
+                onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'} 
+                onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}
+              >
+                + Create Category
+              </button>
             </div>
           </div>
           
