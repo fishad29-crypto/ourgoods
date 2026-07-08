@@ -1195,23 +1195,12 @@ const AddProduct = () => {
                         >
                           {expandedCats[cat] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                         </button>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: '#334155', cursor: 'pointer', fontWeight: isCatChecked ? 600 : 400 }}>
-                          <input 
-                            type="checkbox" 
-                            checked={isCatChecked}
-                            onChange={(e) => {
-                              const newCats = e.target.checked 
-                                ? [...currentCats, cat]
-                                : currentCats.filter(c => c !== cat);
-                              setFormData(prev => ({ ...prev, category: newCats }));
-                              if (e.target.checked && !expandedCats[cat]) {
-                                setExpandedCats(prev => ({ ...prev, [cat]: true }));
-                              }
-                            }}
-                            style={{ width: '16px', height: '16px', borderRadius: '4px', cursor: 'pointer', accentColor: 'var(--brand-pink)' }}
-                          />
+                        <span 
+                          onClick={(e) => { e.preventDefault(); setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] })); }}
+                          style={{ fontSize: '14px', color: '#334155', cursor: 'pointer', fontWeight: isCatChecked ? 600 : 400, userSelect: 'none' }}
+                        >
                           {cat}
-                        </label>
+                        </span>
                       </div>
                       <button 
                         type="button"
