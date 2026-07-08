@@ -794,7 +794,7 @@ const AddProduct = () => {
           </div>
 
           {/* Pricing & Inventory */}
-          <div className="form-section" style={{ backgroundColor: 'var(--admin-surface)', padding: '24px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
+          <div className="form-section" style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
             <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '16px', fontWeight: 600 }}>Pricing & Inventory</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div className="form-group">
@@ -811,11 +811,28 @@ const AddProduct = () => {
               </div>
               <div className="form-group">
                 <label className="form-label">Profit Margin (%)</label>
-                <input type="number" className="form-input" placeholder={formData.salePrice && formData.costPrice ? (((formData.salePrice - formData.costPrice) / formData.salePrice) * 100).toFixed(1) + '%' : "Auto-calculated"} readOnly style={{ backgroundColor: 'var(--admin-bg)' }} />
+                {(() => {
+                  const sellingPrice = parseFloat(formData.salePrice) || parseFloat(formData.regularPrice) || 0;
+                  const cost = parseFloat(formData.costPrice) || 0;
+                  let margin = '';
+                  if (sellingPrice > 0) {
+                    margin = (((sellingPrice - cost) / sellingPrice) * 100).toFixed(1) + '%';
+                  }
+                  return (
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      value={margin}
+                      placeholder="Auto-calculated" 
+                      readOnly 
+                      style={{ backgroundColor: '#f8fafc', color: '#64748b' }} 
+                    />
+                  );
+                })()}
               </div>
             </div>
             
-            <hr style={{ border: 'none', borderTop: '1px solid var(--admin-border)', margin: '20px 0' }} />
+            <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div className="form-group">
