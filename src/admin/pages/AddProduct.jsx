@@ -1,14 +1,61 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Save, UploadCloud, X, Plus, Sparkles, Image as ImageIcon, Loader2, Trash2, Bold, Italic, Underline, Link, List, ListOrdered, AlignLeft, Info, Star, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Save, UploadCloud, X, Plus, Sparkles, Image as ImageIcon, Loader2, Trash2, Bold, Italic, Underline, Link, List, ListOrdered, AlignLeft, Info, Star, ChevronDown, ChevronRight, Globe, Factory, Home } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import Tesseract from 'tesseract.js';
 import MediaManagerModal from '../../components/MediaManagerModal';
-import { addProductToFrontend } from '../../utils/MockData';
-import { categorySubcategories } from '../../components/CategorySubcategories';
-import { allCategories } from '../../components/AllCategorySection';
-import realProducts from '../../utils/realProducts.json';
+import RichTextEditor from '../components/RichTextEditor';
+import { addProductToFrontend, getProductById, useCategories } from '../../utils/MockData';
 import '../admin.css';
+
+
+const getBadgeColor = (colorName) => {
+  if (!colorName) return '#e2e8f0';
+  const name = colorName.toLowerCase().trim();
+  
+  // Hex codes or rgb/hsl
+  if (name.startsWith('#') || name.startsWith('rgb') || name.startsWith('hsl')) {
+    return name;
+  }
+  
+  // Basic color matching based on substrings
+  if (name.includes('red')) return '#ef4444';
+  if (name.includes('blue')) return '#3b82f6';
+  if (name.includes('green')) return '#22c55e';
+  if (name.includes('yellow')) return '#eab308';
+  if (name.includes('pink')) return '#ec4899';
+  if (name.includes('purple')) return '#a855f7';
+  if (name.includes('orange')) return '#f97316';
+  if (name.includes('grey') || name.includes('gray')) return '#64748b';
+  if (name.includes('black')) return '#0f172a';
+  if (name.includes('white')) return '#ffffff';
+  if (name.includes('brown')) return '#92400e';
+  if (name.includes('navy')) return '#1e3a8a';
+  if (name.includes('cyan')) return '#06b6d4';
+  if (name.includes('teal')) return '#14b8a6';
+  if (name.includes('rose')) return '#f43f5e';
+  if (name.includes('indigo')) return '#6366f1';
+  if (name.includes('violet')) return '#8b5cf6';
+  if (name.includes('fuchsia')) return '#d946ef';
+  
+  // Fallback to name without spaces (browser might parse 'carmine' but not 'carmine red' unless it's a known color)
+  // Actually, we can just return the name without spaces and let the browser try it
+  return name.replace(/\s/g, '');
+};
+
+
+const sortAttributes = (attrs) => {
+  if (!attrs) return [];
+  const predefinedOrder = ['Color', 'Size', 'Body Size', 'Material', 'Style', 'Capacity', 'Model', 'Volume'];
+  return [...attrs].sort((a, b) => {
+    const idxA = predefinedOrder.indexOf(a.name);
+    const idxB = predefinedOrder.indexOf(b.name);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return 0;
+  });
+};
 
 const AddProduct = () => {
   const navigate = useNavigate();
@@ -21,10 +68,22 @@ const AddProduct = () => {
   });
   const [isCompressing, setIsCompressing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showVariantMenu, setShowVariantMenu] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [showMediaManager, setShowMediaManager] = useState(false);
   const [importUrl, setImportUrl] = useState('');
   const [draggedImgIdx, setDraggedImgIdx] = useState(null);
+  const [colorImageMap, setColorImageMap] = useState(() => {
+    try {
+      const saved = localStorage.getItem('addProductData');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.colorImages || {};
+      }
+    } catch {}
+    return {};
+  });
+  const { categories: allCategories, subcategories: subcats } = useCategories();
   const [formData, setFormData] = useState(() => {
     try {
       const saved = localStorage.getItem('addProductData');
@@ -35,27 +94,27 @@ const AddProduct = () => {
       infoSections: [],
       regularPrice: '', salePrice: '', costPrice: '',
       sku: '', stock: '', attributes: [{ name: 'Color', options: '' }, { name: 'Size', options: '' }],
-      category: '', subcategory: '', brand: '', placements: [],
+      category: ['All Products'], subcategory: '', brand: '', placements: [],
       vendor: 'OURGOODS Direct', type: 'Local Ready Stock',
       tags: '', weight: '', deliveryTime: '',
       returnPolicy: '7 Days Easy Return', status: 'Active',
       seoTitle: '', seoDescription: ''
     };
   });
-  const [productType, setProductType] = useState('domestic');
+  const [productType, setProductType] = useState('retail');
   const [expandedCats, setExpandedCats] = useState({});
-  const [categories, setCategories] = useState(() => {
-    const initialCategories = {};
-    for (const cat in categorySubcategories) {
-      initialCategories[cat] = categorySubcategories[cat].map(sub => sub.name);
+  const categories = React.useMemo(() => {
+    const derivedCats = {};
+    for (const cat in subcats) {
+      derivedCats[cat] = subcats[cat].map(sub => sub.name);
     }
-    return initialCategories;
-  });
+    return derivedCats;
+  }, [subcats]);
   const fileInputRef = React.useRef(null);
 
   React.useEffect(() => {
-    localStorage.setItem('addProductData', JSON.stringify(formData));
-  }, [formData]);
+    localStorage.setItem('addProductData', JSON.stringify({...formData, colorImages: colorImageMap}));
+  }, [formData, colorImageMap]);
 
   React.useEffect(() => {
     localStorage.setItem('addProductImages', JSON.stringify(images));
@@ -65,11 +124,11 @@ const AddProduct = () => {
     const params = new URLSearchParams(location.search);
     const typeParam = params.get('type');
     if (typeParam) {
-      setProductType(typeParam);
+      setProductType(typeParam === 'domestic' || typeParam === 'global' ? 'retail' : typeParam);
     }
     const editId = params.get('edit');
     if (editId) {
-      const product = realProducts.find(p => p.id === editId);
+      const product = getProductById(editId);
       if (product) {
         setFormData(prev => ({
           ...prev,
@@ -103,11 +162,45 @@ const AddProduct = () => {
     });
   };
 
+  const handlePricingChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+      const regPrice = parseFloat(updated.regularPrice) || 0;
+      const discVal = parseFloat(updated.discountValue) || 0;
+      const discType = updated.discountType || 'flat';
+
+      if (name === 'regularPrice' || name === 'discountValue' || name === 'discountType') {
+        if (discType === 'flat') {
+          updated.salePrice = Math.max(0, regPrice - discVal).toString();
+        } else if (discType === 'percentage') {
+          updated.salePrice = Math.max(0, regPrice - (regPrice * (discVal / 100))).toString();
+        }
+      } else if (name === 'salePrice') {
+        updated.discountType = 'flat';
+        updated.discountValue = Math.max(0, regPrice - parseFloat(value)).toString();
+      }
+      return updated;
+    });
+  };
+
   const handleAddAttribute = () => {
-    setFormData(prev => ({
-      ...prev,
-      attributes: [...(prev.attributes || []), { name: '', options: '' }]
-    }));
+    setFormData(prev => {
+      const currentAttrs = prev.attributes || [];
+      const predefined = ['Color', 'Size', 'Body Size', 'Material', 'Style', 'Capacity', 'Model', 'Volume'];
+      const usedNames = currentAttrs.map(a => a.name);
+      let nextName = '';
+      for (const p of predefined) {
+        if (!usedNames.includes(p)) {
+          nextName = p;
+          break;
+        }
+      }
+      return {
+        ...prev,
+        attributes: [...currentAttrs, { name: nextName, options: '' }]
+      };
+    });
   };
 
   const handleRemoveAttribute = (index) => {
@@ -139,6 +232,9 @@ const AddProduct = () => {
     setFormData(prev => {
       const newAttr = [...prev.attributes];
       newAttr[index] = { ...newAttr[index], [field]: value };
+      if (field === 'name') {
+        return { ...prev, attributes: sortAttributes(newAttr) };
+      }
       return { ...prev, attributes: newAttr };
     });
   };
@@ -558,7 +654,8 @@ const AddProduct = () => {
       category: finalCategory,
       subcategory: finalSubcategory,
       type: productType,
-      images: images
+      images: images,
+      colorImages: colorImageMap
     });
     
     localStorage.removeItem('addProductData');
@@ -572,11 +669,12 @@ const AddProduct = () => {
     if (window.confirm("Are you sure you want to clear all fields? This cannot be undone.")) {
       localStorage.removeItem('addProductData');
       localStorage.removeItem('addProductImages');
+      setColorImageMap({});
       setFormData({
         name: '', description: '', features: '',
         regularPrice: '', salePrice: '', costPrice: '',
         sku: '', stock: '', attributes: [{ name: 'Color', options: '' }, { name: 'Size', options: '' }],
-        category: '', subcategory: '', brand: '',
+        category: ['All Products'], subcategory: '', brand: '',
         vendor: 'OURGOODS Direct', type: 'Local Ready Stock',
         tags: '', weight: '', deliveryTime: '',
         returnPolicy: '7 Days Easy Return', status: 'Active',
@@ -611,8 +709,15 @@ const AddProduct = () => {
           <button className="icon-btn" onClick={() => navigate('/admin/products')}>
             <ArrowLeft size={20} />
           </button>
-          <h2 className="page-title">Add New Product</h2>
+          <h2 className="page-title" style={{ margin: 0 }}>Add New Product</h2>
         </div>
+
+        {/* Type Toggle */}
+        <div style={{ display: 'flex', backgroundColor: '#f1f5f9', borderRadius: '8px', padding: '4px' }}>
+          <button type="button" onClick={() => setProductType('retail')} style={{ padding: '6px 12px', fontSize: '13px', fontWeight: 600, borderRadius: '6px', border: 'none', cursor: 'pointer', backgroundColor: productType === 'retail' ? '#fff' : 'transparent', color: productType === 'retail' ? 'var(--brand-pink)' : '#64748b', boxShadow: productType === 'retail' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px' }}><Home size={16} /> Retail Shop</button>
+          <button type="button" onClick={() => setProductType('factory')} style={{ padding: '6px 12px', fontSize: '13px', fontWeight: 600, borderRadius: '6px', border: 'none', cursor: 'pointer', backgroundColor: productType === 'factory' ? '#fff' : 'transparent', color: productType === 'factory' ? 'var(--brand-pink)' : '#64748b', boxShadow: productType === 'factory' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px' }}><Factory size={16} /> Wholesale (Factory)</button>
+        </div>
+
         <div style={{ display: 'flex', gap: '12px' }}>
           <button className="btn-outline" onClick={handleClearAll} style={{ color: '#ef4444', borderColor: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Trash2 size={18} /> Clear All
@@ -627,79 +732,6 @@ const AddProduct = () => {
         {/* Main Form Content */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
-          {/* Product Type Selection */}
-          <div className="form-section" style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: 600, color: '#1e293b' }}>Product Type</h3>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              
-              <div 
-                onClick={() => setProductType('domestic')}
-                style={{ 
-                  flex: 1,
-                  padding: '12px 16px', 
-                  border: productType === 'domestic' ? '2px solid var(--brand-pink)' : '1px solid #e2e8f0', 
-                  borderRadius: '8px', 
-                  cursor: 'pointer', 
-                  display: 'flex', 
-                  alignItems: 'center',
-                  gap: '12px',
-                  backgroundColor: productType === 'domestic' ? '#fff0f6' : '#ffffff',
-                  transition: 'all 0.2s'
-                }}
-              >
-                <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: productType === 'domestic' ? '5px solid var(--brand-pink)' : '2px solid #cbd5e1', backgroundColor: '#fff', flexShrink: 0, transition: 'all 0.2s' }} />
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: productType === 'domestic' ? '#901254' : '#334155', marginBottom: '2px' }}>Domestic Item</div>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>Local stock & vendors</div>
-                </div>
-              </div>
-              
-              <div 
-                onClick={() => setProductType('global')}
-                style={{ 
-                  flex: 1,
-                  padding: '12px 16px', 
-                  border: productType === 'global' ? '2px solid var(--brand-pink)' : '1px solid #e2e8f0', 
-                  borderRadius: '8px', 
-                  cursor: 'pointer', 
-                  display: 'flex', 
-                  alignItems: 'center',
-                  gap: '12px',
-                  backgroundColor: productType === 'global' ? '#fff0f6' : '#ffffff',
-                  transition: 'all 0.2s'
-                }}
-              >
-                <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: productType === 'global' ? '5px solid var(--brand-pink)' : '2px solid #cbd5e1', backgroundColor: '#fff', flexShrink: 0, transition: 'all 0.2s' }} />
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: productType === 'global' ? '#901254' : '#334155', marginBottom: '2px' }}>Global Sourcing</div>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>International items</div>
-                </div>
-              </div>
-              
-              <div 
-                onClick={() => setProductType('factory')}
-                style={{ 
-                  flex: 1,
-                  padding: '12px 16px', 
-                  border: productType === 'factory' ? '2px solid var(--brand-pink)' : '1px solid #e2e8f0', 
-                  borderRadius: '8px', 
-                  cursor: 'pointer', 
-                  display: 'flex', 
-                  alignItems: 'center',
-                  gap: '12px',
-                  backgroundColor: productType === 'factory' ? '#fff0f6' : '#ffffff',
-                  transition: 'all 0.2s'
-                }}
-              >
-                <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: productType === 'factory' ? '5px solid var(--brand-pink)' : '2px solid #cbd5e1', backgroundColor: '#fff', flexShrink: 0, transition: 'all 0.2s' }} />
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: productType === 'factory' ? '#901254' : '#334155', marginBottom: '2px' }}>Factory Direct</div>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>Bulk factory products</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Media */}
           <div className="form-section" style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -806,6 +838,9 @@ const AddProduct = () => {
             )}
           </div>
 
+          
+          
+          
           {/* General Information */}
           {/* General Information */}
           <div className="form-section" style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
@@ -846,6 +881,380 @@ const AddProduct = () => {
                 </select>
               </div>
             </div>
+          {/* Variants */}
+          {/* Variants */}
+          <div style={{ marginBottom: "24px", marginTop: "16px" }}>
+            
+            {(formData.attributes || []).map((attr, idx) => (
+              <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '16px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', width: '100%' }}>
+                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '12px', color: '#64748b' }}>Attribute Name</label>
+                  <select 
+                    className="form-input" 
+                    value={attr.name} 
+                    onChange={(e) => handleAttributeChange(idx, 'name', e.target.value)}
+                    style={{ cursor: 'pointer', appearance: 'none', background: '#fff url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E") no-repeat right .75rem top 50%', backgroundSize: "12px auto", paddingRight: "30px" }}
+                  >
+                    <option value="">Custom Name...</option>
+                    <option value="Color" disabled={formData.attributes.some((a, i) => a.name === 'Color' && i !== idx)}>Color</option>
+                    <option value="Size" disabled={formData.attributes.some((a, i) => a.name === 'Size' && i !== idx)}>Size</option>
+                    <option value="Body Size" disabled={formData.attributes.some((a, i) => a.name === 'Body Size' && i !== idx)}>Body Size</option>
+                    <option value="Material" disabled={formData.attributes.some((a, i) => a.name === 'Material' && i !== idx)}>Material</option>
+                    <option value="Style" disabled={formData.attributes.some((a, i) => a.name === 'Style' && i !== idx)}>Style</option>
+                    <option value="Capacity" disabled={formData.attributes.some((a, i) => a.name === 'Capacity' && i !== idx)}>Capacity</option>
+                    <option value="Model" disabled={formData.attributes.some((a, i) => a.name === 'Model' && i !== idx)}>Model</option>
+                  </select>
+                  {!['Color', 'Size', 'Body Size', 'Material', 'Style', 'Capacity', 'Model', 'Volume'].includes(attr.name) && (
+                     <input type="text" className="form-input" style={{ marginTop: '8px' }} placeholder="Enter custom name" value={attr.name} onChange={(e) => handleAttributeChange(idx, 'name', e.target.value)} />
+                  )}
+                </div>
+                                <div className="form-group" style={{ flex: 2, marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: '12px', color: '#64748b' }}>Options</label>
+                  
+                  {/* Selected Chips Area */}
+                  <div className="form-input" style={{ minHeight: '42px', height: 'auto', display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px 12px', alignItems: 'center', marginBottom: '12px' }}>
+                    {attr.options && attr.options.split(',').map(o => o.trim()).filter(Boolean).map((opt, i) => (
+                      <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f1f5f9', padding: '4px 10px', borderRadius: '16px', fontSize: '12px', fontWeight: 500, color: '#334155', border: '1px solid #e2e8f0' }}>
+                        {attr.name === 'Color' && (
+                           <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: opt.toLowerCase().replace(/\\s/g, ''), border: '1px solid rgba(0,0,0,0.15)' }}></span>
+                        )}
+                        {opt}
+                        <button type="button" onClick={() => {
+                          const newOpts = attr.options.split(',').map(o => o.trim()).filter(Boolean);
+                          newOpts.splice(i, 1);
+                          handleAttributeChange(idx, 'options', newOpts.join(', '));
+                        }} style={{ background: 'none', border: 'none', padding: 0, marginLeft: '4px', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center' }} onMouseOver={e => e.currentTarget.style.color = '#ef4444'} onMouseOut={e => e.currentTarget.style.color = '#94a3b8'}>
+                          <X size={14} strokeWidth={2.5} />
+                        </button>
+                      </span>
+                    ))}
+                    
+                    <input 
+                      type="text" 
+                      placeholder={attr.options ? "Add more..." : "e.g. Red, Blue, Green (Press Enter)"} 
+                      style={{ border: 'none', background: 'transparent', outline: 'none', flex: 1, minWidth: '150px', fontSize: '13px', padding: '4px 0', color: '#1e293b' }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ',') {
+                          e.preventDefault();
+                          const val = e.currentTarget.value.trim();
+                          if (val) {
+                            const newVals = val.split(',').map(v => v.trim()).filter(Boolean);
+                            const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
+                            
+                            let updatedOpts = [...currentOpts];
+                            newVals.forEach(nv => {
+                              if (!updatedOpts.includes(nv)) {
+                                updatedOpts.push(nv);
+                              }
+                            });
+                            
+                            handleAttributeChange(idx, 'options', updatedOpts.join(', '));
+                            e.currentTarget.value = '';
+                          }
+                        } else if (e.key === 'Backspace' && e.currentTarget.value === '' && attr.options) {
+                           e.preventDefault();
+                           const currentOpts = attr.options.split(',').map(o => o.trim()).filter(Boolean);
+                           currentOpts.pop();
+                           handleAttributeChange(idx, 'options', currentOpts.join(', '));
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const val = e.currentTarget.value.trim();
+                        if (val) {
+                          const newVals = val.split(',').map(v => v.trim()).filter(Boolean);
+                          const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
+                          
+                          let updatedOpts = [...currentOpts];
+                          newVals.forEach(nv => {
+                            if (!updatedOpts.includes(nv)) {
+                              updatedOpts.push(nv);
+                            }
+                          });
+                          
+                          handleAttributeChange(idx, 'options', updatedOpts.join(', '));
+                          e.currentTarget.value = '';
+                        }
+                      }}
+                    />
+                  </div>
+                  
+                  </div>
+                <button 
+                  className="icon-btn" 
+                  onClick={() => handleRemoveAttribute(idx)}
+                  style={{ marginTop: '26px', color: '#ef4444', backgroundColor: '#fee2e2', border: '1px solid #fca5a5', padding: '8px', borderRadius: '8px' }}
+                  title="Remove Attribute"
+                  onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#fca5a5'; e.currentTarget.style.color = '#b91c1c'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.color = '#ef4444'; }}
+                >
+                  <Trash2 size={16} />
+                </button>
+                </div>
+                <div style={{ width: "100%", paddingTop: "8px", borderTop: "1px dashed #e2e8f0" }}>
+                  {/* Quick Select Chips */}
+                  {attr.name === 'Color' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {['Red', 'Blue', 'Green', 'Black', 'White', 'Yellow', 'Pink', 'Purple', 'Orange', 'Grey', 'Navy', 'Brown'].filter(_opt => !(attr.options && attr.options.split(',').map(o => o.trim()).includes(_opt))).map(color => (
+                          <span 
+                            key={color}
+                            onClick={() => {
+                              const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
+                              if (!currentOpts.includes(color)) {
+                                handleAttributeChange(idx, 'options', [...currentOpts, color].join(', '));
+                              }
+                            }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', padding: '4px 10px', background: '#e2e8f0', borderRadius: '16px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.2s', border: '1px solid #cbd5e1' }}
+                            onMouseOver={(e) => { e.currentTarget.style.background = '#cbd5e1'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                          >
+                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: getBadgeColor(color), border: '1px solid rgba(0,0,0,0.1)' }}></span>
+                            + {color}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* Inline Color Image Mapping */}
+                      {images.length > 0 && attr.options && attr.options.trim() !== '' && (
+                        <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '12px' }}>
+                          <label className="form-label" style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>Color Image Mapping</label>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {attr.options.split(',').map(o => o.trim()).filter(Boolean).map(color => (
+                              <div key={color} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '8px', background: '#fff', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100px' }}>
+                                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: getBadgeColor(color), border: '1px solid rgba(0,0,0,0.15)' }}></span>
+                                  <span style={{ fontSize: '13px', fontWeight: 500, color: '#334155' }}>{color}</span>
+                                </div>
+                                <div style={{ flex: 1, display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+                                  {images.map((img, imgIdx) => (
+                                    <div 
+                                      key={imgIdx}
+                                      onClick={() => setColorImageMap(prev => prev[color] === img.url ? (({ [color]: _, ...rest }) => rest)(prev) : { ...prev, [color]: img.url })}
+                                      style={{ 
+                                        width: '36px', height: '36px', flexShrink: 0, borderRadius: '4px', cursor: 'pointer', overflow: 'hidden', 
+                                        border: colorImageMap[color] === img.url ? '2px solid var(--brand-pink)' : '1px solid #e2e8f0',
+                                        opacity: colorImageMap[color] === img.url ? 1 : 0.5,
+                                        transition: 'all 0.2s'
+                                      }}
+                                    >
+                                      {(img.type && img.type.startsWith('video/')) || (img.url && img.url.match(/\.(mp4|webm|ogg)$/i)) ? (
+                                         <video src={img.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                      ) : (
+                                         <img src={img.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {attr.name === 'Body Size' && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {Array.from({ length: 56 - 28 + 1 }, (_, i) => String(i + 28)).filter(_opt => !(attr.options && attr.options.split(',').map(o => o.trim()).includes(_opt))).map(size => (
+                        <span 
+                          key={size}
+                          onClick={() => {
+                            const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
+                            if (!currentOpts.includes(size)) {
+                              handleAttributeChange(idx, 'options', [...currentOpts, size].join(', '));
+                            }
+                          }}
+                          style={{ fontSize: '11px', padding: '4px 10px', background: '#e2e8f0', borderRadius: '16px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.2s', border: '1px solid #cbd5e1' }}
+                          onMouseOver={(e) => { e.currentTarget.style.background = '#cbd5e1'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                        >
+                          + {size}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {attr.name === 'Size' && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', 'Free Size'].filter(_opt => !(attr.options && attr.options.split(',').map(o => o.trim()).includes(_opt))).map(size => (
+                        <span 
+                          key={size}
+                          onClick={() => {
+                            const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
+                            if (!currentOpts.includes(size)) {
+                              handleAttributeChange(idx, 'options', [...currentOpts, size].join(', '));
+                            }
+                          }}
+                          style={{ fontSize: '11px', padding: '4px 10px', background: '#e2e8f0', borderRadius: '16px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.2s', border: '1px solid #cbd5e1' }}
+                          onMouseOver={(e) => { e.currentTarget.style.background = '#cbd5e1'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                        >
+                          + {size}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {attr.name === 'Material' && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {['Cotton', 'Polyester', 'Leather', 'Wood', 'Metal', 'Plastic', 'Glass', 'Ceramic'].filter(_opt => !(attr.options && attr.options.split(',').map(o => o.trim()).includes(_opt))).map(mat => (
+                        <span 
+                          key={mat}
+                          onClick={() => {
+                            const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
+                            if (!currentOpts.includes(mat)) {
+                              handleAttributeChange(idx, 'options', [...currentOpts, mat].join(', '));
+                            }
+                          }}
+                          style={{ fontSize: '11px', padding: '4px 10px', background: '#e2e8f0', borderRadius: '16px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.2s', border: '1px solid #cbd5e1' }}
+                          onMouseOver={(e) => { e.currentTarget.style.background = '#cbd5e1'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                        >
+                          + {mat}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {attr.name === 'Style' && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {['Modern', 'Classic', 'Vintage', 'Minimalist', 'Casual', 'Formal', 'Sport'].map(style => (
+                        <span 
+                          key={style}
+                          onClick={() => {
+                            const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
+                            if (!currentOpts.includes(style)) {
+                              handleAttributeChange(idx, 'options', [...currentOpts, style].join(', '));
+                            }
+                          }}
+                          style={{ fontSize: '11px', padding: '4px 10px', background: '#e2e8f0', borderRadius: '16px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.2s', border: '1px solid #cbd5e1' }}
+                          onMouseOver={(e) => { e.currentTarget.style.background = '#cbd5e1'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                        >
+                          + {style}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {attr.name === 'Capacity' && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {['16GB', '32GB', '64GB', '128GB', '256GB', '512GB', '1TB', '100ml', '250ml', '500ml', '1L'].map(cap => (
+                        <span 
+                          key={cap}
+                          onClick={() => {
+                            const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
+                            if (!currentOpts.includes(cap)) {
+                              handleAttributeChange(idx, 'options', [...currentOpts, cap].join(', '));
+                            }
+                          }}
+                          style={{ fontSize: '11px', padding: '4px 10px', background: '#e2e8f0', borderRadius: '16px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.2s', border: '1px solid #cbd5e1' }}
+                          onMouseOver={(e) => { e.currentTarget.style.background = '#cbd5e1'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                        >
+                          + {cap}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {attr.name === 'Volume' && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '150px', overflowY: 'auto', padding: '4px' }}>
+                      {Array.from({ length: 100 }, (_, i) => String((i + 1) * 10) + 'ml')
+                        .filter(_opt => !(attr.options && attr.options.split(',').map(o => o.trim()).includes(_opt)))
+                        .map(vol => (
+                        <span 
+                          key={vol}
+                          onClick={() => {
+                            const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
+                            if (!currentOpts.includes(vol)) {
+                              handleAttributeChange(idx, 'options', [...currentOpts, vol].join(', '));
+                            }
+                          }}
+                          style={{ fontSize: '11px', padding: '4px 10px', background: '#e2e8f0', borderRadius: '16px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.2s', border: '1px solid #cbd5e1' }}
+                          onMouseOver={(e) => { e.currentTarget.style.background = '#cbd5e1'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                        >
+                          + {vol}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {attr.name === 'Model' && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {['Base', 'Pro', 'Max', 'Ultra', 'Plus', 'Mini', 'Lite'].map(mod => (
+                        <span 
+                          key={mod}
+                          onClick={() => {
+                            const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
+                            if (!currentOpts.includes(mod)) {
+                              handleAttributeChange(idx, 'options', [...currentOpts, mod].join(', '));
+                            }
+                          }}
+                          style={{ fontSize: '11px', padding: '4px 10px', background: '#e2e8f0', borderRadius: '16px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.2s', border: '1px solid #cbd5e1' }}
+                          onMouseOver={(e) => { e.currentTarget.style.background = '#cbd5e1'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                        >
+                          + {mod}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                
+                </div>
+              </div>
+            ))}
+            
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              <button 
+                type="button" 
+                className="btn-outline" 
+                onClick={() => setShowVariantMenu(!showVariantMenu)} 
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: formData.attributes && formData.attributes.length > 0 ? '8px' : '0' }}
+              >
+                <Plus size={16} /> Add Variants / Attributes
+              </button>
+              
+              {showVariantMenu && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '8px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', zIndex: 50, minWidth: '200px', overflow: 'hidden' }}>
+                  <div style={{ padding: '8px 12px', fontSize: '11px', fontWeight: 600, color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>SELECT VARIANT</div>
+                  <div style={{ maxHeight: '250px', overflowY: 'auto', padding: '4px' }}>
+                    {['Color', 'Size', 'Body Size', 'Material', 'Style', 'Capacity', 'Model', 'Volume'].map(v => {
+                      const isUsed = formData.attributes && formData.attributes.some(a => a.name === v);
+                      return (
+                        <div 
+                          key={v}
+                          onClick={() => {
+                            if (!isUsed) {
+                              setFormData(prev => ({ ...prev, attributes: sortAttributes([...(prev.attributes || []), { name: v, options: '' }]) }));
+                              setShowVariantMenu(false);
+                            }
+                          }}
+                          style={{ padding: '8px 12px', fontSize: '13px', color: isUsed ? '#cbd5e1' : '#334155', cursor: isUsed ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px' }}
+                          onMouseOver={(e) => { if(!isUsed) { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = 'var(--brand-pink)'; } }}
+                          onMouseOut={(e) => { if(!isUsed) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#334155'; } }}
+                        >
+                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isUsed ? '#cbd5e1' : 'var(--brand-pink)' }}></div>
+                          {v}
+                        </div>
+                      );
+                    })}
+                    <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }}></div>
+                    <div 
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, attributes: [...(prev.attributes || []), { name: '', options: '' }] }));
+                        setShowVariantMenu(false);
+                      }}
+                      style={{ padding: '8px 12px', fontSize: '13px', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '4px' }}
+                      onMouseOver={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = 'var(--brand-pink)'; }}
+                      onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#334155'; }}
+                    >
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', border: '1px solid #94a3b8' }}></div>
+                      Custom Variant...
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
 
             <div className="form-group" style={{ marginBottom: '32px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -862,26 +1271,11 @@ const AddProduct = () => {
                 </button>
               </div>
               
-              <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#fff', transition: 'border-color 0.2s' }}>
-                <div style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', borderBottom: '1px solid #f1f5f9', gap: '16px', color: '#64748b', backgroundColor: '#f8fafc' }}>
-                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'inherit', display: 'flex', borderRadius: '4px' }} onMouseOver={e => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={e => e.currentTarget.style.background = 'none'}><Bold size={16} strokeWidth={2.5} /></button>
-                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'inherit', display: 'flex', borderRadius: '4px' }} onMouseOver={e => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={e => e.currentTarget.style.background = 'none'}><Italic size={16} strokeWidth={2.5} /></button>
-                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'inherit', display: 'flex', borderRadius: '4px' }} onMouseOver={e => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={e => e.currentTarget.style.background = 'none'}><Underline size={16} strokeWidth={2.5} /></button>
-                  <div style={{ width: '1px', height: '20px', backgroundColor: '#e2e8f0' }}></div>
-                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'inherit', display: 'flex', borderRadius: '4px' }} onMouseOver={e => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={e => e.currentTarget.style.background = 'none'}><AlignLeft size={16} strokeWidth={2.5} /></button>
-                  <div style={{ width: '1px', height: '20px', backgroundColor: '#e2e8f0' }}></div>
-                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'inherit', display: 'flex', borderRadius: '4px' }} onMouseOver={e => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={e => e.currentTarget.style.background = 'none'}><Link size={16} strokeWidth={2.5} /></button>
-                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'inherit', display: 'flex', borderRadius: '4px' }} onMouseOver={e => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={e => e.currentTarget.style.background = 'none'}><List size={16} strokeWidth={2.5} /></button>
-                  <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: 'inherit', display: 'flex', borderRadius: '4px' }} onMouseOver={e => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={e => e.currentTarget.style.background = 'none'}><ListOrdered size={16} strokeWidth={2.5} /></button>
-                </div>
-                <textarea 
-                  name="description"
-                  style={{ width: '100%', border: 'none', padding: '16px', resize: 'vertical', outline: 'none', fontSize: '14px', minHeight: '140px', backgroundColor: '#fff', color: '#334155', lineHeight: '1.5' }}
-                  placeholder="Describe your product here..."
-                  value={formData.description}
-                  onChange={handleChange}
-                ></textarea>
-              </div>
+              <RichTextEditor 
+                value={formData.description} 
+                onChange={(val) => setFormData(prev => ({ ...prev, description: val }))} 
+                placeholder="Describe your product here..." 
+              />
             </div>
             
             <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: '32px -24px 24px -24px' }} />
@@ -934,241 +1328,156 @@ const AddProduct = () => {
             </div>
           </div>
 
-          {/* Pricing & Inventory */}
+          {/* Pricing */}
           <div className="form-section" style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '16px', fontWeight: 600 }}>Pricing & Inventory</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>{productType === 'factory' ? 'Wholesale Pricing' : 'Retail Pricing'}</h3>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div className="form-group">
-                <label className="form-label">Original Price (৳)</label>
-                <input type="number" name="regularPrice" className="form-input" placeholder="0.00" value={formData.regularPrice} onChange={handleChange} />
+                <label className="form-label">{productType === 'factory' ? 'Wholesale Price (৳)' : 'Retail Price (৳)'}</label>
+                <input type="number" name="regularPrice" className="form-input" placeholder="0.00" value={formData.regularPrice || ''} onChange={handlePricingChange} />
               </div>
               <div className="form-group">
-                <label className="form-label">Selling Price (৳) *</label>
-                <input type="number" name="salePrice" className="form-input" placeholder="0.00" value={formData.salePrice} onChange={handleChange} />
+                <label className="form-label">Discount</label>
+                <div style={{ display: 'flex' }}>
+                  <input type="number" name="discountValue" className="form-input" style={{ flex: 2, borderTopRightRadius: 0, borderBottomRightRadius: 0, borderRight: 'none', margin: 0 }} placeholder="0" value={formData.discountValue || ''} onChange={handlePricingChange} />
+                  <select name="discountType" className="form-input" style={{ flex: 1, padding: '8px 12px', borderTopLeftRadius: 0, borderBottomLeftRadius: 0, backgroundColor: '#f8fafc', color: '#475569', fontWeight: 500, margin: 0 }} value={formData.discountType || 'flat'} onChange={handlePricingChange}>
+                    <option value="flat">Flat (৳)</option>
+                    <option value="percentage">%</option>
+                  </select>
+                </div>
               </div>
               <div className="form-group">
-                <label className="form-label">Cost Price (৳)</label>
-                <input type="number" name="costPrice" className="form-input" placeholder="0.00" value={formData.costPrice} onChange={handleChange} />
+                <label className="form-label">Discount Price (৳)</label>
+                <input type="number" name="salePrice" className="form-input" placeholder="0.00" value={formData.salePrice || ''} onChange={handlePricingChange} />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+              <div className="form-group">
+                <label className="form-label">Cost of Goods (৳)</label>
+                <input type="number" name="costPrice" className="form-input" placeholder="0.00" value={formData.costPrice || ''} onChange={handleChange} />
               </div>
               <div className="form-group">
-                <label className="form-label">Profit Margin (%)</label>
+                <label className="form-label">Profit (৳)</label>
                 {(() => {
                   const sellingPrice = parseFloat(formData.salePrice) || parseFloat(formData.regularPrice) || 0;
                   const cost = parseFloat(formData.costPrice) || 0;
-                  let margin = '';
-                  if (sellingPrice > 0) {
-                    margin = (((sellingPrice - cost) / sellingPrice) * 100).toFixed(1) + '%';
-                  }
+                  const minQty = parseInt(formData.minQuantity) || 1;
+                  const profitNum = sellingPrice > 0 && cost > 0 ? (sellingPrice - cost) * minQty : 0;
+                  const hasValue = sellingPrice > 0 && cost > 0;
+                  const isPositive = profitNum >= 0;
                   return (
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      value={margin}
-                      placeholder="Auto-calculated" 
-                      readOnly 
-                      style={{ backgroundColor: '#f8fafc', color: '#64748b' }} 
-                    />
+                    <div style={{ 
+                      display: 'flex', alignItems: 'center', height: '42px', padding: '0 14px', 
+                      backgroundColor: hasValue ? (isPositive ? '#ecfdf5' : '#fef2f2') : '#f8fafc', 
+                      border: `1px solid ${hasValue ? (isPositive ? '#a7f3d0' : '#fecaca') : '#e2e8f0'}`, 
+                      borderRadius: '6px', 
+                      color: hasValue ? (isPositive ? '#059669' : '#e11d48') : '#94a3b8',
+                      fontWeight: hasValue ? 600 : 400,
+                      fontSize: '14px'
+                    }}>
+                      {hasValue ? `${isPositive ? '+' : ''}${profitNum.toFixed(2)}` : 'Auto-calculated'}
+                    </div>
+                  );
+                })()}
+              </div>
+              <div className="form-group">
+                <label className="form-label">Margin (%)</label>
+                {(() => {
+                  const sellingPrice = parseFloat(formData.salePrice) || parseFloat(formData.regularPrice) || 0;
+                  const cost = parseFloat(formData.costPrice) || 0;
+                  const profitNum = sellingPrice > 0 && cost > 0 ? (sellingPrice - cost) : 0;
+                  const margin = sellingPrice > 0 && cost > 0 ? ((profitNum / sellingPrice) * 100).toFixed(1) : '';
+                  const hasValue = sellingPrice > 0 && cost > 0;
+                  const isPositive = profitNum >= 0;
+                  return (
+                    <div style={{ 
+                      display: 'flex', alignItems: 'center', height: '42px', padding: '0 14px', 
+                      backgroundColor: hasValue ? (isPositive ? '#ecfdf5' : '#fef2f2') : '#f8fafc', 
+                      border: `1px solid ${hasValue ? (isPositive ? '#a7f3d0' : '#fecaca') : '#e2e8f0'}`, 
+                      borderRadius: '6px', 
+                      color: hasValue ? (isPositive ? '#059669' : '#e11d48') : '#94a3b8',
+                      fontWeight: hasValue ? 600 : 400,
+                      fontSize: '14px'
+                    }}>
+                      {hasValue ? `${isPositive ? '+' : ''}${margin}%` : 'Auto-calculated'}
+                    </div>
                   );
                 })()}
               </div>
             </div>
-            
+
             <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '20px 0' }} />
 
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+              <div className="form-group">
+                <label className="form-label">Measurement / Weight</label>
+                <div style={{ display: 'flex' }}>
+                  <input type="number" name="weight" className="form-input" placeholder="0.80" value={formData.weight || ''} onChange={handleChange} style={{ flex: 2, borderTopRightRadius: 0, borderBottomRightRadius: 0, borderRight: 'none', margin: 0 }} />
+                  <select name="measurementUnit" className="form-input" style={{ flex: 1, padding: '8px 12px', borderTopLeftRadius: 0, borderBottomLeftRadius: 0, backgroundColor: '#f8fafc', color: '#475569', fontWeight: 500, margin: 0 }} value={formData.measurementUnit || 'kg'} onChange={handleChange}>
+                    <option value="kg">kg</option>
+                    <option value="g">g</option>
+                    <option value="lb">lb</option>
+                    <option value="cm">cm</option>
+                    <option value="m">m</option>
+                    <option value="inch">inch</option>
+                    <option value="yard">yard</option>
+                    <option value="L">L</option>
+                    <option value="ml">ml</option>
+                  </select>
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Minimum Quantity</label>
+                <input type="number" name="minQuantity" className="form-input" placeholder="1" min="1" value={formData.minQuantity || '1'} onChange={handleChange} />
+              </div>
+            </div>
+          </div>
+
+          {/* Inventory */}
+          <div className="form-section" style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '16px', fontWeight: 600 }}>Inventory</h3>
+            
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div className="form-group">
                 <label className="form-label">SKU (Stock Keeping Unit) *</label>
-                <input type="text" name="sku" className="form-input" placeholder="e.g. TS-BLK-M" value={formData.sku} onChange={handleChange} />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input 
+                    type="text" 
+                    name="sku" 
+                    className="form-input" 
+                    placeholder="e.g. TS-BLK-M" 
+                    value={formData.sku || ''} 
+                    onChange={handleChange} 
+                    style={{ paddingRight: '110px', width: '100%', margin: 0 }} 
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const prefix = formData.category 
+                        ? (Array.isArray(formData.category) ? formData.category[0] : formData.category).substring(0, 3).toUpperCase() 
+                        : (formData.name ? formData.name.substring(0, 3).toUpperCase() : 'PRD');
+                      const randomNum = Math.floor(10000 + Math.random() * 90000);
+                      setFormData(prev => ({ ...prev, sku: `${prefix}-${randomNum}` }));
+                    }}
+                    style={{ position: 'absolute', right: '6px', backgroundColor: '#fff0f6', border: 'none', color: '#901254', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', borderRadius: '4px', transition: 'all 0.2s' }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fce7f3'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#fff0f6'}
+                  >
+                    <Sparkles size={13} /> Auto Generate
+                  </button>
+                </div>
               </div>
               <div className="form-group">
                 <label className="form-label">Stock Quantity *</label>
-                <input type="number" name="stock" className="form-input" placeholder="0" value={formData.stock} onChange={handleChange} />
+                <input type="number" name="stock" className="form-input" placeholder="0" value={formData.stock || ''} onChange={handleChange} />
               </div>
             </div>
           </div>
 
-          {/* Variants */}
-          {/* Variants */}
-          <div className="form-section" style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-            <div style={{ marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Variants / Attributes</h3>
-            </div>
-            
-            {(formData.attributes || []).map((attr, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', marginBottom: '16px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
-                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '12px', color: '#64748b' }}>Attribute Name</label>
-                  <select 
-                    className="form-input" 
-                    value={attr.name} 
-                    onChange={(e) => handleAttributeChange(idx, 'name', e.target.value)}
-                    style={{ cursor: 'pointer', appearance: 'none', background: '#fff url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E") no-repeat right .75rem top 50%', backgroundSize: "12px auto", paddingRight: "30px" }}
-                  >
-                    <option value="">Custom Name...</option>
-                    <option value="Color">Color</option>
-                    <option value="Size">Size</option>
-                    <option value="Material">Material</option>
-                    <option value="Style">Style</option>
-                    <option value="Capacity">Capacity</option>
-                    <option value="Model">Model</option>
-                  </select>
-                  {!['Color', 'Size', 'Material', 'Style', 'Capacity', 'Model'].includes(attr.name) && (
-                     <input type="text" className="form-input" style={{ marginTop: '8px' }} placeholder="Enter custom name" value={attr.name} onChange={(e) => handleAttributeChange(idx, 'name', e.target.value)} />
-                  )}
-                </div>
-                <div className="form-group" style={{ flex: 2, marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: '12px', color: '#64748b' }}>Options (Comma separated)</label>
-                  <input type="text" className="form-input" placeholder="e.g. Red, Blue, Green" value={attr.options} onChange={(e) => handleAttributeChange(idx, 'options', e.target.value)} />
-                  
-                  {/* Quick Select Chips */}
-                  {attr.name === 'Color' && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
-                      {['Red', 'Blue', 'Green', 'Black', 'White', 'Yellow', 'Pink', 'Purple', 'Orange', 'Grey', 'Navy', 'Brown'].map(color => (
-                        <span 
-                          key={color}
-                          onClick={() => {
-                            const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
-                            if (!currentOpts.includes(color)) {
-                              handleAttributeChange(idx, 'options', [...currentOpts, color].join(', '));
-                            }
-                          }}
-                          style={{ fontSize: '11px', padding: '4px 10px', background: '#e2e8f0', borderRadius: '16px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.2s', border: '1px solid #cbd5e1' }}
-                          onMouseOver={(e) => { e.currentTarget.style.background = '#cbd5e1'; e.currentTarget.style.borderColor = '#94a3b8'; }}
-                          onMouseOut={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                        >
-                          + {color}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {attr.name === 'Size' && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
-                      {['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', 'Free Size'].map(size => (
-                        <span 
-                          key={size}
-                          onClick={() => {
-                            const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
-                            if (!currentOpts.includes(size)) {
-                              handleAttributeChange(idx, 'options', [...currentOpts, size].join(', '));
-                            }
-                          }}
-                          style={{ fontSize: '11px', padding: '4px 10px', background: '#e2e8f0', borderRadius: '16px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.2s', border: '1px solid #cbd5e1' }}
-                          onMouseOver={(e) => { e.currentTarget.style.background = '#cbd5e1'; e.currentTarget.style.borderColor = '#94a3b8'; }}
-                          onMouseOut={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                        >
-                          + {size}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {attr.name === 'Material' && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
-                      {['Cotton', 'Polyester', 'Leather', 'Wood', 'Metal', 'Plastic', 'Glass', 'Ceramic'].map(mat => (
-                        <span 
-                          key={mat}
-                          onClick={() => {
-                            const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
-                            if (!currentOpts.includes(mat)) {
-                              handleAttributeChange(idx, 'options', [...currentOpts, mat].join(', '));
-                            }
-                          }}
-                          style={{ fontSize: '11px', padding: '4px 10px', background: '#e2e8f0', borderRadius: '16px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.2s', border: '1px solid #cbd5e1' }}
-                          onMouseOver={(e) => { e.currentTarget.style.background = '#cbd5e1'; e.currentTarget.style.borderColor = '#94a3b8'; }}
-                          onMouseOut={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                        >
-                          + {mat}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {attr.name === 'Style' && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
-                      {['Modern', 'Classic', 'Vintage', 'Minimalist', 'Casual', 'Formal', 'Sport'].map(style => (
-                        <span 
-                          key={style}
-                          onClick={() => {
-                            const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
-                            if (!currentOpts.includes(style)) {
-                              handleAttributeChange(idx, 'options', [...currentOpts, style].join(', '));
-                            }
-                          }}
-                          style={{ fontSize: '11px', padding: '4px 10px', background: '#e2e8f0', borderRadius: '16px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.2s', border: '1px solid #cbd5e1' }}
-                          onMouseOver={(e) => { e.currentTarget.style.background = '#cbd5e1'; e.currentTarget.style.borderColor = '#94a3b8'; }}
-                          onMouseOut={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                        >
-                          + {style}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {attr.name === 'Capacity' && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
-                      {['16GB', '32GB', '64GB', '128GB', '256GB', '512GB', '1TB', '100ml', '250ml', '500ml', '1L'].map(cap => (
-                        <span 
-                          key={cap}
-                          onClick={() => {
-                            const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
-                            if (!currentOpts.includes(cap)) {
-                              handleAttributeChange(idx, 'options', [...currentOpts, cap].join(', '));
-                            }
-                          }}
-                          style={{ fontSize: '11px', padding: '4px 10px', background: '#e2e8f0', borderRadius: '16px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.2s', border: '1px solid #cbd5e1' }}
-                          onMouseOver={(e) => { e.currentTarget.style.background = '#cbd5e1'; e.currentTarget.style.borderColor = '#94a3b8'; }}
-                          onMouseOut={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                        >
-                          + {cap}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {attr.name === 'Model' && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
-                      {['Base', 'Pro', 'Max', 'Ultra', 'Plus', 'Mini', 'Lite'].map(mod => (
-                        <span 
-                          key={mod}
-                          onClick={() => {
-                            const currentOpts = attr.options ? attr.options.split(',').map(o => o.trim()).filter(Boolean) : [];
-                            if (!currentOpts.includes(mod)) {
-                              handleAttributeChange(idx, 'options', [...currentOpts, mod].join(', '));
-                            }
-                          }}
-                          style={{ fontSize: '11px', padding: '4px 10px', background: '#e2e8f0', borderRadius: '16px', cursor: 'pointer', color: '#334155', fontWeight: 500, transition: 'all 0.2s', border: '1px solid #cbd5e1' }}
-                          onMouseOver={(e) => { e.currentTarget.style.background = '#cbd5e1'; e.currentTarget.style.borderColor = '#94a3b8'; }}
-                          onMouseOut={(e) => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                        >
-                          + {mod}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <button 
-                  className="icon-btn" 
-                  onClick={() => handleRemoveAttribute(idx)}
-                  style={{ marginTop: '26px', color: '#ef4444', backgroundColor: '#fee2e2', border: '1px solid #fca5a5', padding: '8px', borderRadius: '8px' }}
-                  title="Remove Attribute"
-                  onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#fca5a5'; e.currentTarget.style.color = '#b91c1c'; }}
-                  onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#fee2e2'; e.currentTarget.style.color = '#ef4444'; }}
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
-            {(!formData.attributes || formData.attributes.length === 0) && (
-              <div style={{ textAlign: 'center', padding: '20px', color: '#64748b', fontSize: '14px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1', marginBottom: '16px' }}>
-                No variants added. Click "Add Variant" to allow buyers to select options.
-              </div>
-            )}
-            
-            <button 
-              type="button" 
-              className="btn-outline" 
-              onClick={handleAddAttribute} 
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: formData.attributes && formData.attributes.length > 0 ? '8px' : '0' }}
-            >
-              <Plus size={16} /> Add Variant
-            </button>
-          </div>
 
         </div>
 
@@ -1183,30 +1492,45 @@ const AddProduct = () => {
               {Object.keys(categories).map(cat => {
                 const subcats = [...(categories[cat] || [])];
                 const currentCats = Array.isArray(formData.category) ? formData.category : (formData.category ? formData.category.split(', ') : []);
+                const currentSubcats = Array.isArray(formData.subcategory) ? formData.subcategory : (formData.subcategory ? formData.subcategory.split(', ') : []);
                 const isCatChecked = currentCats.includes(cat);
+                const selectedSubcatsCount = subcats.filter(sub => currentSubcats.includes(sub)).length;
                 
                 return (
                   <div key={cat}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span 
-                          onClick={(e) => { e.preventDefault(); setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] })); }}
-                          style={{ fontSize: '14px', color: '#334155', cursor: 'pointer', fontWeight: isCatChecked ? 600 : 400, userSelect: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}
-                        >
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', color: '#334155', fontWeight: 500, userSelect: 'none' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={isCatChecked}
+                            onChange={(e) => {
+                              const newCats = e.target.checked 
+                                ? [...currentCats, cat] 
+                                : currentCats.filter(c => c !== cat);
+                              setFormData(prev => ({ ...prev, category: newCats }));
+                            }}
+                            className="custom-checkbox"
+                          />
                           {allCategories.find(c => c.name === cat)?.icon && (
                             <i className={allCategories.find(c => c.name === cat).icon} style={{ fontSize: '18px', color: 'var(--brand-pink)' }}></i>
                           )}
                           {cat}
-                        </span>
+                          {selectedSubcatsCount > 0 && (
+                            <span style={{ color: '#94a3b8', fontSize: '13px' }}>({selectedSubcatsCount})</span>
+                          )}
+                        </label>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <button 
-                          type="button" 
-                          onClick={(e) => { e.preventDefault(); setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] })); }}
-                          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#64748b' }}
-                        >
-                          {expandedCats[cat] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                        </button>
+                        {subcats.length > 0 && (
+                          <button 
+                            type="button" 
+                            onClick={(e) => { e.preventDefault(); setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] })); }}
+                            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#64748b' }}
+                          >
+                            {expandedCats[cat] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                          </button>
+                        )}
                       </div>
                     </div>
                     
@@ -1214,11 +1538,10 @@ const AddProduct = () => {
                     {expandedCats[cat] && (
                     <div style={{ paddingLeft: '34px', marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {subcats.length > 0 && subcats.map(sub => {
-                        const currentSubcats = Array.isArray(formData.subcategory) ? formData.subcategory : (formData.subcategory ? formData.subcategory.split(', ') : []);
                         const isSubChecked = currentSubcats.includes(sub);
                         return (
                           <div key={sub} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', color: '#64748b', cursor: 'pointer' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', color: '#64748b', cursor: 'pointer', fontWeight: 400 }}>
                               <input 
                                 type="checkbox" 
                                 checked={isSubChecked}
@@ -1238,7 +1561,7 @@ const AddProduct = () => {
                                     category: newCats
                                   }));
                                 }}
-                                style={{ width: '14px', height: '14px', borderRadius: '3px', cursor: 'pointer', accentColor: 'var(--brand-pink)' }}
+                                className="custom-checkbox"
                               />
                               {sub}
                             </label>
@@ -1274,8 +1597,6 @@ const AddProduct = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
                 { name: 'Flash Sale', icon: 'las la-bolt' },
-                { name: 'Global Shop', icon: 'las la-globe' },
-                { name: 'Factory Direct', icon: 'las la-industry' },
                 { name: 'Combo Offers', icon: 'las la-box' },
                 { name: 'Ourgoods Choice', icon: 'las la-star' },
                 { name: 'Cash Deals', icon: 'las la-money-bill-wave' },
@@ -1295,7 +1616,7 @@ const AddProduct = () => {
                           : currentPlacements.filter(p => p !== placement.name);
                         setFormData(prev => ({ ...prev, placements: newPlacements }));
                       }}
-                      style={{ width: '16px', height: '16px', borderRadius: '4px', cursor: 'pointer', accentColor: 'var(--brand-pink)' }}
+                      className="custom-checkbox"
                     />
                     <i className={placement.icon} style={{ fontSize: '18px', color: 'var(--brand-pink)' }}></i>
                     {placement.name}
@@ -1313,6 +1634,10 @@ const AddProduct = () => {
               <div className="form-group">
                 <label className="form-label">Brand</label>
                 <input type="text" name="brand" className="form-input" placeholder="Brand name" value={formData.brand} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Vendor Location</label>
+                <input type="text" name="vendorLocation" className="form-input" placeholder="e.g. Dhaka, Bangladesh" value={formData.vendorLocation || ''} onChange={handleChange} />
               </div>
               <div className="form-group">
                 <label className="form-label">Vendor / Seller</label>
@@ -1334,10 +1659,6 @@ const AddProduct = () => {
             <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '16px', fontWeight: 600 }}>Shipping & Policies</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div className="form-group">
-                <label className="form-label">Weight (kg)</label>
-                <input type="number" name="weight" className="form-input" placeholder="0.5" value={formData.weight} onChange={handleChange} />
-              </div>
-              <div className="form-group">
                 <label className="form-label">Estimated Delivery Time</label>
                 <input type="text" name="deliveryTime" className="form-input" placeholder="e.g. 2-4 Days" value={formData.deliveryTime} onChange={handleChange} />
               </div>
@@ -1348,6 +1669,105 @@ const AddProduct = () => {
                   <option value="No Return Policy">No Return Policy</option>
                   <option value="Replacement Only">Replacement Only</option>
                 </select>
+              </div>
+              <div className="form-group" style={{ marginTop: '8px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+                <label className="form-label" style={{ marginBottom: '12px' }}>Display Settings</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '13px', color: '#475569', fontWeight: 600 }}>Delivery Estimates</label>
+                    
+                    {!formData.isCreatingCustomDelivery ? (
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <select 
+                          className="form-input" 
+                          style={{ maxWidth: '400px' }}
+                          value={formData.deliveryBannerType || '24-48h'}
+                          onChange={(e) => setFormData(prev => ({...prev, deliveryBannerType: e.target.value}))}
+                        >
+                          <option value="24-48h">24-48h (Show vendor location)</option>
+                          <option value="global">21-28 day (Standard) & 4-7 days (Express)</option>
+                          <option value="1-5days">1-5 days in Bangladesh & 1-2 days in Dhaka</option>
+                          {formData.deliveryBannerType && formData.deliveryBannerType.startsWith('custom:') && (
+                            <option value={formData.deliveryBannerType}>
+                              {formData.deliveryBannerType.replace('custom:', '')}
+                            </option>
+                          )}
+                          <option value="none">Don't show delivery estimates</option>
+                        </select>
+                        <button 
+                          type="button"
+                          onClick={() => setFormData(prev => ({...prev, isCreatingCustomDelivery: true, customDeliveryText: ''}))}
+                          style={{ padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', color: '#334155', fontWeight: 500 }}
+                        >
+                          + Custom Create
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <input 
+                          type="text" 
+                          className="form-input" 
+                          placeholder="e.g., 7-14 Days Express"
+                          style={{ maxWidth: '400px' }}
+                          value={formData.customDeliveryText || ''}
+                          onChange={(e) => setFormData(prev => ({...prev, customDeliveryText: e.target.value}))}
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            if(formData.customDeliveryText) {
+                              setFormData(prev => ({
+                                ...prev, 
+                                deliveryBannerType: 'custom:' + prev.customDeliveryText,
+                                isCreatingCustomDelivery: false
+                              }));
+                            }
+                          }}
+                          style={{ padding: '8px 16px', background: 'var(--brand-pink)', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', color: '#fff', fontWeight: 500 }}
+                        >
+                          Save Option
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => setFormData(prev => ({...prev, isCreatingCustomDelivery: false}))}
+                          style={{ padding: '8px 12px', background: 'transparent', border: 'none', fontSize: '13px', cursor: 'pointer', color: '#64748b', fontWeight: 500 }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '12px' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={formData.showSameDayDelivery === true}
+                      onChange={(e) => setFormData(prev => ({...prev, showSameDayDelivery: e.target.checked}))}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#E43292' }}
+                    />
+                    <span style={{ fontSize: '14px', color: '#334155', fontWeight: 500 }}>Available for Same Day Delivery (before 12pm)</span>
+                  </label>
+                  
+                  <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+                    <label style={{ fontSize: '13px', color: '#475569', fontWeight: 600, paddingBottom: '8px', display: 'block' }}>Payment Policy</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <input type="radio" name="paymentOption" value="cod" checked={(formData.paymentOption || 'cod') === 'cod'} onChange={(e) => setFormData(prev => ({...prev, paymentOption: e.target.value}))} style={{ accentColor: '#E43292' }} />
+                        <span style={{ fontSize: '14px', color: '#334155' }}>Cash on Delivery</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <input type="radio" name="paymentOption" value="full_advance" checked={formData.paymentOption === 'full_advance'} onChange={(e) => setFormData(prev => ({...prev, paymentOption: e.target.value}))} style={{ accentColor: '#E43292' }} />
+                        <span style={{ fontSize: '14px', color: '#334155' }}>Full advance customer will pay</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        <input type="radio" name="paymentOption" value="partial_advance" checked={formData.paymentOption === 'partial_advance'} onChange={(e) => setFormData(prev => ({...prev, paymentOption: e.target.value}))} style={{ accentColor: '#E43292' }} />
+                        <span style={{ fontSize: '14px', color: '#334155' }}>60% advance customer will pay & 40% cash on delivery</span>
+                      </label>
+                    </div>
+                  </div>
+                  
+
+                </div>
               </div>
             </div>
           </div>

@@ -435,3 +435,36 @@ button {
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   }
 }
+
+/* Custom Checkbox matching the requested style */
+.custom-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid #7cb1f9;
+  border-radius: 4px;
+  background-color: #ffffff;
+  cursor: pointer;
+  position: relative;
+  outline: none;
+  flex-shrink: 0;
+  transition: all 0.2s ease-in-out;
+}
+
+.custom-checkbox:checked {
+  background-color: #eef3f9;
+  border-color: #d1e0f0;
+}
+
+.custom-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid #b5c5db;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}

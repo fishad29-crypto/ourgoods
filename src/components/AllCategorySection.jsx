@@ -1,18 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { categorySubcategories } from './CategorySubcategories';
-
-export const allCategories = [
-  // Regular Categories
-  { id: 0, name: 'Ourgoods Stock', icon: 'las la-money-bill-wave', image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&q=90&w=150' },
-  { id: 1, name: 'Apparels', icon: 'las la-female', image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&q=90&w=150' },
-  { id: 3, name: 'Jewelry & Accessories', icon: 'las la-gem', image: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&q=90&w=150' },
-  { id: 4, name: 'Purse & Bags', icon: 'las la-shopping-bag', image: 'https://images.unsplash.com/photo-1584916201218-f4242ceb4809?auto=format&fit=crop&q=90&w=150' },
-  { id: 5, name: 'Sneakers & Shoes', icon: 'las la-shoe-prints', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=90&w=150' },
-  { id: 6, name: 'Beauty & Health', icon: 'las la-spa', image: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&q=90&w=150' },
-  { id: 7, name: 'Home & Decor', icon: 'las la-home', image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&q=90&w=150' }
-];
+import { useCategories } from '../utils/MockData';
 
 const AllCategorySection = ({ onCategorySelect, onClose }) => {
+  const { categories: allCategories, subcategories: categorySubcategories } = useCategories();
   const [activeCat, setActiveCat] = useState(allCategories[0].name);
   const sectionRefs = useRef({});
   const isClickingRef = useRef(false);

@@ -637,54 +637,131 @@ const ProductDetailsPage = () => {
             {(() => {
               const isGlobalProduct = product?.type === 'global' || product?.type === 'Global Product' || product?.marketType === 'global' || product?.product_type === 'Global Product' || product?.product_type === 'China Pre-Order';
               
-              if (isGlobalProduct) {
-                return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#fef5e7', borderRadius: '8px' }}>
-                      <i className="las la-truck" style={{ fontSize: '20px', color: '#f39c12' }}></i>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '12px', color: '#666', lineHeight: '1.2' }}>Standard Delivery</span>
-                        <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2', marginTop: '2px' }}>21 - 28 Days</span>
+              let bannerType = product?.deliveryBannerType;
+              if (!bannerType && product?.showDeliveryBanner !== false) {
+                bannerType = isGlobalProduct ? 'global' : '24-48h';
+              }
+              
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                  {bannerType === 'global' && (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#fef5e7', borderRadius: '8px' }}>
+                        <i className="las la-truck" style={{ fontSize: '20px', color: '#f39c12' }}></i>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '12px', color: '#666', lineHeight: '1.2' }}>Standard Delivery</span>
+                            {product?.vendorLocation && (
+                              <span style={{ fontSize: '11px', background: '#fff', border: '1px solid #f39c12', color: '#f39c12', padding: '1px 6px', borderRadius: '4px' }}>from {product.vendorLocation}</span>
+                            )}
+                          </div>
+                          <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2', marginTop: '2px' }}>21 - 28 Days</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#e3f2fd', borderRadius: '8px' }}>
+                        <i className="las la-shipping-fast" style={{ fontSize: '20px', color: '#2196f3' }}></i>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '12px', color: '#666', lineHeight: '1.2' }}>Express Delivery</span>
+                            {product?.vendorLocation && (
+                              <span style={{ fontSize: '11px', background: '#fff', border: '1px solid #2196f3', color: '#2196f3', padding: '1px 6px', borderRadius: '4px' }}>from {product.vendorLocation}</span>
+                            )}
+                          </div>
+                          <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2', marginTop: '2px' }}>4 - 7 Business Days</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  
+                  {bannerType === '24-48h' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', padding: '10px 12px', background: '#fef5e7', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className="las la-truck" style={{ fontSize: '20px', color: '#f39c12' }}></i>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                            <span style={{ fontSize: '12px', color: '#666', lineHeight: '1.2' }}>Estimated Delivery</span>
+                            {product?.vendorLocation && (
+                              <span style={{ fontSize: '11px', background: '#fff', border: '1px solid #f39c12', color: '#f39c12', padding: '1px 6px', borderRadius: '4px' }}>from {product.vendorLocation}</span>
+                            )}
+                          </div>
+                          <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2' }}>24-48h in Bangladesh</span>
+                        </div>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#e3f2fd', borderRadius: '8px' }}>
-                      <i className="las la-shipping-fast" style={{ fontSize: '20px', color: '#2196f3' }}></i>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '12px', color: '#666', lineHeight: '1.2' }}>Express Delivery</span>
-                        <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2', marginTop: '2px' }}>4 - 7 Business Days</span>
+                  )}
+
+                  {bannerType === '1-5days' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', padding: '10px 12px', background: '#fef5e7', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className="las la-truck" style={{ fontSize: '20px', color: '#f39c12' }}></i>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                            <span style={{ fontSize: '12px', color: '#666', lineHeight: '1.2' }}>Estimated Delivery</span>
+                            {product?.vendorLocation && (
+                              <span style={{ fontSize: '11px', background: '#fff', border: '1px solid #f39c12', color: '#f39c12', padding: '1px 6px', borderRadius: '4px' }}>from {product.vendorLocation}</span>
+                            )}
+                          </div>
+                          <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2' }}>1-5 Days in Bangladesh & 1-2 Days in Dhaka</span>
+                        </div>
                       </div>
                     </div>
+                  )}
+
+                  {bannerType?.startsWith('custom:') && (
+                    <div style={{ display: 'flex', flexDirection: 'column', padding: '10px 12px', background: '#fef5e7', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className="las la-truck" style={{ fontSize: '20px', color: '#f39c12' }}></i>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                            <span style={{ fontSize: '12px', color: '#666', lineHeight: '1.2' }}>Estimated Delivery</span>
+                            {product?.vendorLocation && (
+                              <span style={{ fontSize: '11px', background: '#fff', border: '1px solid #f39c12', color: '#f39c12', padding: '1px 6px', borderRadius: '4px' }}>from {product.vendorLocation}</span>
+                            )}
+                          </div>
+                          <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2' }}>{bannerType.replace('custom:', '')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {product?.showSameDayDelivery && (
+                    <div style={{ display: 'flex', flexDirection: 'column', padding: '10px 12px', background: '#fef5e7', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className="las la-shipping-fast" style={{ fontSize: '20px', color: '#f39c12' }}></i>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                            <span style={{ fontSize: '12px', color: '#666', lineHeight: '1.2' }}>Same Day Delivery</span>
+                          </div>
+                          <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2' }}>(before 12pm order)</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {(!product?.paymentOption || product?.paymentOption === 'cod') && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#e8f5e9', borderRadius: '8px' }}>
                       <i className="las la-money-bill-wave" style={{ fontSize: '20px', color: '#4caf50' }}></i>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2' }}>Cash on Delivery Available</span>
                       </div>
                     </div>
-                  </div>
-                );
-              }
-
-              return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', padding: '10px 12px', background: '#fef5e7', borderRadius: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <i className="las la-truck" style={{ fontSize: '20px', color: '#f39c12' }}></i>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-                          <span style={{ fontSize: '12px', color: '#666', lineHeight: '1.2' }}>Estimated Delivery</span>
-                        </div>
-                        <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2' }}>24-48h in Bangladesh</span>
+                  )}
+                  {product?.paymentOption === 'full_advance' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#e3f2fd', borderRadius: '8px' }}>
+                      <i className="las la-credit-card" style={{ fontSize: '20px', color: '#2196f3' }}></i>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2' }}>Full Advance Payment Required</span>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#e8f5e9', borderRadius: '8px' }}>
-                    <i className="las la-money-bill-wave" style={{ fontSize: '20px', color: '#4caf50' }}></i>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2' }}>Cash on Delivery Available</span>
+                  )}
+                  {product?.paymentOption === 'partial_advance' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#fff3e0', borderRadius: '8px' }}>
+                      <i className="las la-wallet" style={{ fontSize: '20px', color: '#ff9800' }}></i>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2' }}>60% Advance, 40% Cash on Delivery</span>
+                      </div>
                     </div>
-                  </div>
-
+                  )}
                 </div>
               );
             })()}
@@ -1104,7 +1181,17 @@ const ProductDetailsPage = () => {
                     {attr.options.map(option => (
                       <div 
                         key={option}
-                        onClick={() => setSelectedAttributes(prev => ({ ...prev, [attr.name]: option }))}
+                        onClick={() => {
+                          setSelectedAttributes(prev => ({ ...prev, [attr.name]: option }));
+                          if (attr.name === 'Color' && product.colorImages && product.colorImages[option]) {
+                            const imageUrl = product.colorImages[option];
+                            const productImages = product.images && product.images.length > 0 ? product.images : [product.image];
+                            const imageIndex = productImages.indexOf(imageUrl);
+                            if (imageIndex !== -1) {
+                              setActiveImageIndex(imageIndex);
+                            }
+                          }
+                        }}
                         style={{
                           padding: '8px 16px', background: selectedAttributes[attr.name] === option ? '#FFEDEE' : '#f5f5f5',
                           color: selectedAttributes[attr.name] === option ? '#E91E63' : '#333',

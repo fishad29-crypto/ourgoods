@@ -12,7 +12,7 @@ import ReviewPage from './components/ReviewPage';
 import MessagePage from './components/MessagePage';
 import ProfilePage from './components/ProfilePage';
 import NewUserPromoModal from './components/NewUserPromoModal';
-import { allCategories } from './components/AllCategorySection';
+import { useCategories } from './utils/MockData';
 
 const searchSuggestions = [
   "summer dresses",
@@ -25,9 +25,9 @@ const searchSuggestions = [
   "home decor"
 ];
 
-const categories = ['Home', ...allCategories.map(c => c.name)];
-
 function CustomerApp() {
+  const { categories: allCategories } = useCategories();
+  const categories = ['Home', ...allCategories.map(c => c.name)];
   const navigate = useNavigate();
   const { cartCount, cartTotal } = useCart();
   const { wishlistCount } = useWishlist();

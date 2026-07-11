@@ -5,6 +5,7 @@ import CategorySubcategories from './CategorySubcategories';
 import CategoryTrends from './CategoryTrends';
 import BestSeller from './BestSeller';
 import ProductCard from './ProductCard';
+import { generateProducts } from '../utils/MockData';
 
 const categoryProducts = {
   'Apparels': [
@@ -53,6 +54,11 @@ const categoryProducts = {
 
 
 const CategoryPage = ({ title }) => {
+  const allProductsDynamic = title === 'All Products' ? generateProducts('All', 100) : null;
+  const productsToShow = allProductsDynamic && allProductsDynamic.length > 0 
+    ? allProductsDynamic 
+    : (categoryProducts[title] || categoryProducts['Apparels']);
+
   return (
     <div className="content-container" style={{ paddingBottom: '80px', display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 120px)' }}>
       {/* Category Specific Hero Slider */}
@@ -74,10 +80,10 @@ const CategoryPage = ({ title }) => {
       
       <div style={{ padding: '0 15px 20px 15px' }}>
         <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#111', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <i className="las la-tshirt" style={{ color: 'var(--brand-pink)', fontSize: '22px' }}></i> All {title}
+          <i className={title === 'All Products' ? 'las la-shopping-bag' : 'las la-tshirt'} style={{ color: 'var(--brand-pink)', fontSize: '22px' }}></i> {title === 'All Products' ? 'All Products' : `All ${title}`}
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
-          {(categoryProducts[title] || categoryProducts['Apparels']).map(product => (
+          {productsToShow.map(product => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>

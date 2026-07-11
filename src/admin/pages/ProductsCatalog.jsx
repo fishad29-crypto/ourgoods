@@ -1,42 +1,70 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import realProducts from '../../utils/realProducts.json';
+import { getAllProducts, deleteProduct } from '../../utils/MockData';
 import { Search, Filter, Plus, Edit, Trash2, Image as ImageIcon, X, UploadCloud, Download } from 'lucide-react';
 
 const ProductsCatalog = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
+  const [vendorFilter, setVendorFilter] = useState('All');
   const [showBulkModal, setShowBulkModal] = useState(false);
+  
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const [localProds, setLocalProds] = useState(() => getAllProducts());
+
+  // Dynamic unique filters
+  const uniqueCategories = [...new Set(localProds.map(p => p.category || 'Uncategorized'))].filter(Boolean);
+  const uniqueVendors = [...new Set(localProds.map(p => p.vendor || 'Ourgoods Direct'))].filter(Boolean);
 
   // Map real products to catalog format
-  const catalogData = realProducts.map(p => ({
-    id: p.id,
-    name: p.title,
-    brand: 'Ourgoods',
-    sku: `SKU-${p.id.split('_')[1] || p.id}`,
+  const catalogData = localProds.map(p => ({
+    id: p.id || p.sku,
+    name: p.title || p.name,
+    brand: p.brand || 'Ourgoods',
+    sku: p.sku || `SKU-${(p.id + '').split('_')[1] || p.id}`,
     category: p.category || 'Uncategorized',
-    vendor: 'Ourgoods Direct',
-    type: 'Local Stock',
-    price: p.price,
-    stock: 100, // mock stock
-    status: 'Active',
-    image: p.image
+    vendor: p.vendor || 'Ourgoods Direct',
+    type: p.type || 'Local Stock',
+    price: p.price || p.salePrice || p.originalPrice,
+    stock: p.stock || 100, // mock stock
+    status: p.status || 'Active',
+    image: p.image || (p.images && p.images[0] ? p.images[0].url : '')
   }));
 
   const filteredProducts = catalogData.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           product.sku.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'All' || product.category === categoryFilter;
-    return matchesSearch && matchesCategory;
+    const matchesVendor = vendorFilter === 'All' || product.vendor === vendorFilter;
+    return matchesSearch && matchesCategory && matchesVendor;
   });
+
+  // Reset page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, categoryFilter, vendorFilter]);
+
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
+  const paginatedProducts = filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleDelete = (id) => {
+    if (window.confirm('Are you sure you want to delete this product?')) {
+      deleteProduct(id);
+      setLocalProds(getAllProducts());
+    }
+  };
 
   return (
     <div className="admin-content">
       <div className="page-header">
-        <h2 className="page-title">Products & Catalog ({realProducts.length})</h2>
+        <h2 className="page-title">Products & Catalog ({filteredProducts.length})</h2>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button className="btn-outline" onClick={() => setShowBulkModal(true)}>Bulk Upload</button>
+
           
           <button className="btn-primary" onClick={() => navigate('/admin/products/add')}>
             <Plus size={18} /> Add Product
@@ -64,17 +92,26 @@ const ProductsCatalog = () => {
             onChange={(e) => setCategoryFilter(e.target.value)}
           >
             <option value="All">All Categories</option>
-            <option value="Women Fashion">Women Fashion</option>
-            <option value="Beauty & Health">Beauty & Health</option>
-            <option value="Home & Decor">Home & Decor</option>
+            {uniqueCategories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
           </select>
 
-          <select className="header-search" style={{ width: '180px' }}>
+          <select 
+            className="header-search" 
+            style={{ width: '180px' }}
+            value={vendorFilter}
+            onChange={(e) => setVendorFilter(e.target.value)}
+          >
             <option value="All">All Vendors</option>
-            <option value="Ourgoods Direct">OURGOODS Direct</option>
+            {uniqueVendors.map(vendor => (
+              <option key={vendor} value={vendor}>{vendor}</option>
+            ))}
           </select>
           
-          <button className="btn-outline"><Filter size={18} /> More Filters</button>
+          <button className="btn-outline" onClick={() => alert('Advanced filters coming soon!')}>
+            <Filter size={18} /> More Filters
+          </button>
         </div>
 
         {/* Table */}
@@ -94,8 +131,8 @@ const ProductsCatalog = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredProducts.length > 0 ? (
-              filteredProducts.map((product) => (
+            {paginatedProducts.length > 0 ? (
+              paginatedProducts.map((product) => (
                 <tr key={product.id}>
                   <td><input type="checkbox" /></td>
                   <td>
@@ -135,7 +172,7 @@ const ProductsCatalog = () => {
                   <td>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button className="icon-btn" title="Edit" onClick={() => navigate(`/admin/products/add?edit=${product.id}`)}><Edit size={18} /></button>
-                      <button className="icon-btn" title="Delete" style={{ color: 'var(--status-danger)' }}><Trash2 size={18} /></button>
+                      <button className="icon-btn" title="Delete" onClick={() => handleDelete(product.id)} style={{ color: 'var(--status-danger)' }}><Trash2 size={18} /></button>
                     </div>
                   </td>
                 </tr>
@@ -150,12 +187,28 @@ const ProductsCatalog = () => {
           </tbody>
         </table>
         
-        {/* Pagination placeholder */}
+        {/* Pagination */}
         <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--admin-border)' }}>
-          <span style={{ fontSize: '13px', color: 'var(--admin-text-muted)' }}>Showing {filteredProducts.length} of {catalogData.length} entries</span>
+          <span style={{ fontSize: '13px', color: 'var(--admin-text-muted)' }}>
+            Showing {paginatedProducts.length} of {filteredProducts.length} entries (Page {currentPage} of {totalPages})
+          </span>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button className="btn-outline" style={{ padding: '6px 12px' }}>Previous</button>
-            <button className="btn-outline" style={{ padding: '6px 12px' }}>Next</button>
+            <button 
+              className="btn-outline" 
+              style={{ padding: '6px 12px' }}
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            >
+              Previous
+            </button>
+            <button 
+              className="btn-outline" 
+              style={{ padding: '6px 12px' }}
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>
@@ -191,7 +244,10 @@ const ProductsCatalog = () => {
 
             <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
               <button className="btn-outline" onClick={() => setShowBulkModal(false)}>Cancel</button>
-              <button className="btn-primary" onClick={() => setShowBulkModal(false)}>Start Upload</button>
+              <button className="btn-primary" onClick={() => {
+                alert('File uploaded successfully!');
+                setShowBulkModal(false);
+              }}>Start Upload</button>
             </div>
           </div>
         </div>

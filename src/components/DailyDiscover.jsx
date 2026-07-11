@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ProductCard from './ProductCard';
 import { generateProducts } from '../utils/MockData';
+import AdvancedProductBrowser from './AdvancedProductBrowser';
 
 // Module-level cache to persist shuffled products across unmounts
 // It naturally resets on a full page refresh.
@@ -17,63 +18,7 @@ const TABS = [
 ];
 
 const TabPage = ({ tabLabel }) => {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const observerTarget = useRef(null);
-  const loadingRef = useRef(loading);
-
-  useEffect(() => {
-    loadingRef.current = loading;
-  }, [loading]);
-
-  useEffect(() => {
-    if (dailyDiscoverCache[tabLabel]) {
-      setProducts(dailyDiscoverCache[tabLabel]);
-    } else {
-      const newProducts = generateProducts(tabLabel === 'All Products' ? 'recommended' : tabLabel, 48);
-      dailyDiscoverCache[tabLabel] = newProducts;
-      setProducts(newProducts);
-    }
-  }, [tabLabel]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0].isIntersecting && !loadingRef.current) {
-          setLoading(true);
-          setTimeout(() => {
-            setProducts(prev => {
-              const moreProducts = generateProducts(tabLabel === 'All Products' ? 'recommended' : tabLabel, 24);
-              const updatedProducts = [...prev, ...moreProducts];
-              dailyDiscoverCache[tabLabel] = updatedProducts;
-              return updatedProducts;
-            });
-            setLoading(false);
-          }, 800);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
-
-    return () => observer.disconnect();
-  }, [tabLabel]);
-
-  return (
-    <div style={{ height: '100%', overflowY: 'auto' }}>
-      <div className="product-grid">
-        {products.map((product, idx) => (
-          <ProductCard key={`${product.id}-${idx}`} product={product} />
-        ))}
-      </div>
-      <div ref={observerTarget} style={{ textAlign: 'center', padding: '20px 0', height: '40px' }}>
-        {loading && <i className="las la-spinner la-spin text-pink" style={{ fontSize: '30px' }}></i>}
-      </div>
-    </div>
-  );
+  return <AdvancedProductBrowser tabLabel={tabLabel} />;
 };
 
 const DailyDiscover = () => {
