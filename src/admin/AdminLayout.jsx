@@ -5,7 +5,7 @@ import {
   Box, Truck, CreditCard, RefreshCcw, Megaphone, Globe, 
   Star, BarChart2, HeadphonesIcon, ShieldCheck, Bell, 
   DownloadCloud, Settings, Activity, Menu, Search, Sun, Moon,
-  ChevronDown, Wrench
+  ChevronDown, Wrench, Layers
 } from 'lucide-react';
 import './admin.css';
 

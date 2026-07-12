@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWishlist } from '../context/WishlistContext';
 
@@ -13,8 +13,25 @@ const ProductCard = ({ product }) => {
       ? (product.soldCount / 1000000).toFixed(1).replace(/\.0$/, '') + 'M' 
       : product.soldCount.toLocaleString();
   
+  const videoRef = useRef(null);
+
+  const handleMouseEnter = () => {
+    if (videoRef.current) {
+      videoRef.current.play().catch(e => console.log("Video play prevented", e));
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+    }
+  };
+
   return (
-    <div className="product-card-hover" style={{
+    <div className="product-card-hover" 
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      style={{
       width: '100%',
       background: '#fff',
       border: '1px solid #eaeaea',
@@ -42,6 +59,7 @@ const ProductCard = ({ product }) => {
           )}
         </div>
         <div 
+
           onClick={(e) => {
             e.stopPropagation();
             toggleWishlist(product);
@@ -55,11 +73,46 @@ const ProductCard = ({ product }) => {
             CHOICE
           </div>
         )}
-        <img src={product.image} alt={product.title} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        {(product.image && (
+          product.image.match(/\.(mp4|webm|ogg)$/i) || 
+          product.image.startsWith('data:video/') || 
+          (product.imageType && product.imageType.startsWith('video/'))
+        )) ? (
+          <video 
+            ref={videoRef}
+            src={product.image} 
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
+            muted 
+            loop 
+            playsInline 
+          />
+        ) : (
+          <img 
+            src={product.image} 
+            alt={product.title} 
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
+          />
+        )}
       </div>
       
       <div style={{ padding: '8px 8px 12px 8px', display: 'flex', flexDirection: 'column', flex: 1 }}>
         <div style={{ fontSize: '13px', lineHeight: '1.4', height: '37px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', marginBottom: '6px', color: '#111' }}>
+          {product.ribbon && product.ribbon !== 'None' && (
+            <span style={{ 
+              display: 'inline-block', 
+              background: 'var(--brand-pink, #E43292)', 
+              color: '#fff', 
+              fontSize: '10px', 
+              fontWeight: 700, 
+              padding: '1px 6px', 
+              borderRadius: '3px', 
+              marginRight: '6px', 
+              verticalAlign: 'text-bottom',
+              lineHeight: '14px'
+            }}>
+              {product.ribbon}
+            </span>
+          )}
           {product.title}
         </div>
         

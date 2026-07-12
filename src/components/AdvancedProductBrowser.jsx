@@ -68,7 +68,7 @@ const AdvancedProductBrowser = ({ tabLabel = 'All Products' }) => {
 
   // Extract categories except 'All Products' for the filter sidebar
   const { categories: allCategories } = useCategories();
-  const filterCategories = allCategories.filter(c => c.name !== 'All Products');
+  const filterCategories = allCategories.filter(c => c.name !== 'All Products' && c.isActive !== false);
 
   const FilterContent = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

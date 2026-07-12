@@ -1,301 +1,308 @@
-import React, { useState } from 'react';
-import { Search, Plus, Trash2, ChevronDown, ChevronRight, Image as ImageIcon, Edit2, MoreHorizontal } from 'lucide-react';
-import { 
-  useCategories,
-  addCategory, 
-  updateCategory,
-  deleteCategory, 
-  addSubcategory, 
-  updateSubcategory,
-  deleteSubcategory 
-} from '../../utils/MockData';
+import React, { useState, useEffect } from 'react';
+import { Search, Plus, Edit, Trash2, ChevronDown, ChevronRight, Layers, Image as ImageIcon } from 'lucide-react';
+import { useCategories, addCategory, updateCategory, deleteCategory, updateSubcategory, deleteSubcategory, addSubcategory, getAllProducts } from '../../utils/MockData';
+import MediaManagerModal from '../../components/MediaManagerModal';
 
 const Categories = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const { categories, subcategories } = useCategories();
-  const [activeTab, setActiveTab] = useState('categories');
   const [expandedCats, setExpandedCats] = useState({});
+  const [localProducts, setLocalProducts] = useState([]);
 
-  const [showAddCat, setShowAddCat] = useState(false);
-  const [showAddSub, setShowAddSub] = useState(null);
-  
-  const [newCatName, setNewCatName] = useState('');
-  const [newCatIcon, setNewCatIcon] = useState('');
-  const [newCatImg, setNewCatImg] = useState('');
-  
+  useEffect(() => {
+    setLocalProducts(getAllProducts());
+  }, []);
+
+  const [addingToCategory, setAddingToCategory] = useState(null);
   const [newSubName, setNewSubName] = useState('');
-  const [newSubImg, setNewSubImg] = useState('');
+  const [newSubImage, setNewSubImage] = useState('');
+  const [showMediaModal, setShowMediaModal] = useState(false);
 
-  const [editCat, setEditCat] = useState(null);
-  const [editSub, setEditSub] = useState(null);
-  const [openDropdown, setOpenDropdown] = useState(null);
-
-  const filteredCategories = categories.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  const handleMediaSelect = (files) => {
+    if (files && files.length > 0) {
+      setNewSubImage(files[0].url);
+    }
+    setShowMediaModal(false);
+  };
 
   const toggleExpand = (catName) => {
     setExpandedCats(prev => ({ ...prev, [catName]: !prev[catName] }));
   };
 
+  const filtered = categories
+    .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter(c => c.id !== -1 && c.name !== 'All Products')
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   const handleAddCategory = () => {
-    if (!newCatName) return alert('Category Name is required!');
-    addCategory({ name: newCatName, image: newCatImg || 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&q=80&w=150'
-    });
-    setNewCatName('');
-    setNewCatIcon('');
-    setNewCatImg('');
-    setShowAddCat(false);
-  };
-
-  const handleUpdateCategory = () => {
-    if (!editCat.name) return alert('Category Name is required!');
-    updateCategory(editCat.oldName, { name: editCat.name, icon: editCat.icon, image: editCat.img || 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&q=80&w=150' });
-    setEditCat(null);
-  };
-
-  const handleDeleteCategory = (catName) => {
-    if (window.confirm(`Are you sure you want to delete "${catName}"? This will also delete all subcategories inside it.`)) {
-      deleteCategory(catName);
+    const name = window.prompt("Enter new category name:");
+    if (name) {
+      addCategory({ name, icon: 'las la-box' });
     }
   };
 
-  const handleAddSubcategory = () => {
-    if (!newSubName) return alert('Subcategory Name is required!');
-    addSubcategory(showAddSub, { name: newSubName, img: newSubImg || 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&q=80&w=150'
-    });
-    setNewSubName('');
-    setNewSubImg('');
-    setShowAddSub(null);
-  };
-
-  const handleUpdateSubcategory = () => {
-    if (!editSub.name) return alert('Subcategory Name is required!');
-    updateSubcategory(editSub.parentCat, editSub.oldName, { name: editSub.name, img: editSub.img || 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&q=80&w=150' });
-    setEditSub(null);
-  };
-
-  const handleDeleteSubcategory = (catName, subName) => {
-    if (window.confirm(`Are you sure you want to delete "${subName}" from "${catName}"?`)) {
-      deleteSubcategory(catName, subName);
+  const handleEditCategory = (cat) => {
+    const name = window.prompt("Edit category name:", cat.name);
+    if (name && name !== cat.name) {
+      updateCategory(cat.name, { name });
     }
+  };
+
+  const handleDeleteCategory = (cat) => {
+    if (window.confirm(`Are you sure you want to delete category "${cat.name}"?`)) {
+      deleteCategory(cat.name);
+    }
+  };
+
+  const toggleCategoryStatus = (cat) => {
+    updateCategory(cat.name, { isActive: cat.isActive === false ? true : false });
+  };
+
+  const toggleSubcategoryStatus = (catName, sub) => {
+    updateSubcategory(catName, sub.name, { isActive: sub.isActive === false ? true : false });
+  };
+
+  const handleEditSubcategory = (catName, sub) => {
+    const name = window.prompt(`Edit subcategory name for "${sub.name}":`, sub.name);
+    if (name && name !== sub.name) {
+      const img = window.prompt("Edit subcategory image URL:", sub.img || '');
+      updateSubcategory(catName, sub.name, { name, img: img || sub.img });
+    }
+  };
+
+  const handleDeleteSubcategory = (catName, sub) => {
+    if (window.confirm(`Are you sure you want to delete "${sub.name}"?`)) {
+      deleteSubcategory(catName, sub.name);
+    }
+  };
+
+  const submitAddSubcategory = (catName) => {
+    if (newSubName.trim()) {
+      addSubcategory(catName, { name: newSubName.trim(), img: newSubImage || '', isActive: true });
+      setAddingToCategory(null);
+      setNewSubName('');
+      setNewSubImage('');
+    }
+  };
+
+  const handleEditCategoryIcon = (e, cat) => {
+    e.stopPropagation();
+    const icon = window.prompt("Edit category icon class (e.g. las la-home):", cat.icon || '');
+    if (icon !== null) {
+      updateCategory(cat.name, { icon });
+    }
+  };
+
+  // Helper to count products
+  const getProductsCountForSub = (catName, subName) => {
+    return localProducts.filter(p => {
+      const matchCat = Array.isArray(p.category) ? p.category.includes(catName) : p.category === catName;
+      const matchSub = Array.isArray(p.subcategory) ? p.subcategory.includes(subName) : p.subcategory === subName;
+      return matchCat && (matchSub || (!p.subcategory && subName === 'Uncategorized'));
+    }).length;
   };
 
   return (
-    <div className="admin-content" style={{ backgroundColor: '#f4f6f8', minHeight: '100vh', padding: '32px' }} onClick={() => setOpenDropdown(null)}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
-        <div>
-          <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1e293b', margin: '0 0 8px 0', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            Categories <span style={{ color: '#94a3b8', fontSize: '24px', fontWeight: 'normal' }}>{categories.length}</span>
-          </h2>
-          <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>
-            Organize your products and manage how they're displayed. <a href="#" style={{ color: '#3b82f6', textDecoration: 'none' }}>Learn how</a>
-          </p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ position: 'relative' }}>
-            <Search size={18} color="#64748b" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+    <div className="admin-content">
+      <div className="page-header">
+        <h2 className="page-title">Category Management</h2>
+        <button className="btn-primary" onClick={handleAddCategory}>
+          <Plus size={18} /> Add Category
+        </button>
+      </div>
+
+      <div className="table-container" style={{ padding: '24px', backgroundColor: 'transparent', boxShadow: 'none', border: 'none' }}>
+        <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="header-search" style={{ width: '300px', backgroundColor: 'white' }}>
+            <Search size={18} color="var(--admin-text-muted)" />
             <input 
               type="text" 
-              placeholder="Search..." 
+              placeholder="Search categories..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ padding: '10px 16px 10px 38px', borderRadius: '24px', border: '1px solid #e2e8f0', outline: 'none', width: '200px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
             />
           </div>
-          <button style={{ backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '24px', padding: '10px 20px', fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)' }} onClick={() => activeTab === 'categories' ? setShowAddCat(true) : (categories.length === 0 ? alert('Add a category first!') : setShowAddSub(categories[0].name))}>
-            <Plus size={18} /> New {activeTab === 'categories' ? 'Category' : 'Subcategory'}
-          </button>
         </div>
-      </div>
 
-      <div style={{ display: 'flex', gap: '24px', marginBottom: '24px', borderBottom: '1px solid #e2e8f0' }}>
-        <button 
-          onClick={() => setActiveTab('categories')}
-          style={{ padding: '12px 0', border: 'none', background: 'none', fontSize: '15px', fontWeight: activeTab === 'categories' ? 600 : 500, color: activeTab === 'categories' ? '#1e293b' : '#64748b', borderBottom: activeTab === 'categories' ? '2px solid #3b82f6' : '2px solid transparent', cursor: 'pointer', transition: 'all 0.2s' }}
-        >
-          Categories
-        </button>
-        <button 
-          onClick={() => setActiveTab('subcategories')}
-          style={{ padding: '12px 0', border: 'none', background: 'none', fontSize: '15px', fontWeight: activeTab === 'subcategories' ? 600 : 500, color: activeTab === 'subcategories' ? '#1e293b' : '#64748b', borderBottom: activeTab === 'subcategories' ? '2px solid #3b82f6' : '2px solid transparent', cursor: 'pointer', transition: 'all 0.2s' }}
-        >
-          Subcategories
-        </button>
-      </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {filtered.map(cat => {
+            const subs = [...(subcategories[cat.name] || [])].sort((a, b) => a.name.localeCompare(b.name));
+            const catProducts = localProducts.filter(p => Array.isArray(p.category) ? p.category.includes(cat.name) : p.category === cat.name);
+            const isCatExpanded = expandedCats[cat.name] || searchTerm;
+            const isActive = cat.isActive !== false;
 
-      {activeTab === 'categories' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
-          {filteredCategories.map(cat => {
-            const subs = subcategories[cat.name] || [];
             return (
               <div key={cat.id} style={{ 
-                height: '240px', 
+                border: '1px solid var(--admin-border)', 
                 borderRadius: '12px', 
                 overflow: 'hidden', 
-                position: 'relative', 
-                backgroundImage: cat.image ? `url(${cat.image})` : 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                backgroundColor: 'white', 
+                boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                opacity: isActive ? 1 : 0.6
               }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.8) 100%)' }}></div>
-                
-                <div style={{ position: 'absolute', top: '16px', left: '16px' }}>
-                  <span style={{ backgroundColor: '#22c55e', color: 'white', fontSize: '10px', fontWeight: 700, padding: '4px 8px', borderRadius: '4px', letterSpacing: '0.5px' }}>ACTIVE</span>
-                </div>
-
-                <div style={{ position: 'absolute', top: '16px', right: '16px' }}>
-                  <button onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === `cat-${cat.name}` ? null : `cat-${cat.name}`); }} style={{ background: 'transparent', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: 0.8 }} onMouseOver={(e) => e.currentTarget.style.opacity = '1'} onMouseOut={(e) => e.currentTarget.style.opacity = '0.8'}>
-                    <MoreHorizontal size={24} />
-                  </button>
+                {/* Category Header */}
+                <div 
+                  onClick={() => toggleExpand(cat.name)}
+                  style={{ 
+                    padding: '16px 24px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    backgroundColor: isCatExpanded ? '#f8fafc' : 'white',
+                    borderBottom: isCatExpanded ? '1px solid var(--admin-border)' : 'none',
+                    transition: 'background-color 0.2s'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {cat.icon && <i className={cat.icon} style={{ fontSize: '20px', color: 'var(--brand-pink)' }}></i>}
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#1e293b' }}>{cat.name}</h3>
+                  </div>
                   
-                  {openDropdown === `cat-${cat.name}` && (
-                    <div style={{ position: 'absolute', top: '30px', right: 0, backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', width: '160px', zIndex: 10, overflow: 'hidden' }}>
-                      <button style={{ width: '100%', textAlign: 'left', padding: '10px 16px', border: 'none', background: 'white', cursor: 'pointer', fontSize: '13px', color: '#334155' }} onClick={(e) => { e.stopPropagation(); setEditCat({ oldName: cat.name, name: cat.name, icon: cat.icon || '', img: cat.image || '' }); setOpenDropdown(null); }}>Edit Category</button>
-                      <button style={{ width: '100%', textAlign: 'left', padding: '10px 16px', border: 'none', background: 'white', cursor: 'pointer', fontSize: '13px', color: '#334155' }} onClick={(e) => { e.stopPropagation(); setShowAddSub(cat.name); setOpenDropdown(null); }}>Add Subcategory</button>
-                      <button style={{ width: '100%', textAlign: 'left', padding: '10px 16px', border: 'none', background: 'white', cursor: 'pointer', fontSize: '13px', color: '#ef4444' }} onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat.name); setOpenDropdown(null); }}>Delete Category</button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    <span style={{ fontSize: '13px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 12px', borderRadius: '16px', fontWeight: 500 }}>
+                      {catProducts.length} Products
+                    </span>
+                    
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); toggleCategoryStatus(cat); }}
+                      style={{ 
+                        padding: '4px 12px', 
+                        borderRadius: '20px', 
+                        border: 'none',
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        backgroundColor: isActive ? 'var(--status-success)' : '#f1f5f9',
+                        color: isActive ? 'white' : '#64748b',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {isActive ? 'ON' : 'OFF'}
+                    </button>
+                    
+                    <div style={{ display: 'flex', gap: '8px', borderLeft: '1px solid #e2e8f0', paddingLeft: '16px' }}>
+                      <button className="icon-btn" title="Edit Category" onClick={(e) => { e.stopPropagation(); handleEditCategory(cat); }}><Edit size={16} /></button>
+                      <button className="icon-btn" style={{ color: 'var(--status-danger)' }} title="Delete Category" onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat); }}><Trash2 size={16} /></button>
                     </div>
-                  )}
+                  </div>
                 </div>
 
-                <div style={{ position: 'absolute', bottom: '20px', left: '20px', right: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', color: 'white' }}>
-                  <div style={{ fontSize: '20px', fontWeight: 500 }}>{cat.name}</div>
-                  <div style={{ fontSize: '18px', fontWeight: 500 }}>{subs.length}</div>
-                </div>
+                {/* Subcategories List */}
+                {isCatExpanded && (
+                  <div style={{ padding: '0' }}>
+                    {subs.map((sub, idx) => {
+                      const subProductsCount = getProductsCountForSub(cat.name, sub.name);
+                      const isSubActive = sub.isActive !== false;
+
+                      return (
+                        <div key={idx} style={{ 
+                          borderBottom: idx < subs.length - 1 ? '1px solid #f1f5f9' : 'none',
+                          opacity: isSubActive ? 1 : 0.6
+                        }}>
+                          <div 
+                            style={{ 
+                              padding: '12px 24px 12px 48px', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'space-between',
+                              backgroundColor: 'white',
+                              transition: 'background-color 0.2s'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                              {sub.img ? (
+                                <img src={sub.img} alt={sub.name} style={{ width: '30px', height: '30px', borderRadius: '6px', objectFit: 'cover' }} />
+                              ) : (
+                                <div style={{ width: '30px', height: '30px', borderRadius: '6px', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <Layers size={14} color="#94a3b8" />
+                                </div>
+                              )}
+                              <span style={{ fontSize: '14px', fontWeight: 500, color: '#334155', textDecoration: isSubActive ? 'none' : 'line-through' }}>{sub.name}</span>
+                            </div>
+                            
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                              <span style={{ fontSize: '12px', color: '#64748b' }}>{subProductsCount} Items</span>
+                              
+                              <button
+                                onClick={() => toggleSubcategoryStatus(cat.name, sub)}
+                                style={{
+                                  padding: '4px 12px',
+                                  borderRadius: '20px',
+                                  border: 'none',
+                                  fontSize: '11px',
+                                  fontWeight: 'bold',
+                                  cursor: 'pointer',
+                                  backgroundColor: isSubActive ? 'var(--status-success)' : '#f1f5f9',
+                                  color: isSubActive ? 'white' : '#64748b',
+                                  transition: 'all 0.2s'
+                                }}
+                              >
+                                {isSubActive ? 'ON' : 'OFF'}
+                              </button>
+                              
+                              <div style={{ display: 'flex', gap: '12px', borderLeft: '1px solid #e2e8f0', paddingLeft: '16px' }}>
+                                <button className="icon-btn" title="Edit Subcategory" onClick={() => handleEditSubcategory(cat.name, sub)}><Edit size={16} /></button>
+                                <button className="icon-btn" style={{ color: 'var(--status-danger)' }} title="Delete Subcategory" onClick={() => handleDeleteSubcategory(cat.name, sub)}><Trash2 size={16} /></button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Add Subcategory Inline UI */}
+                    <div style={{ 
+                      padding: '16px 24px 24px 48px', 
+                      backgroundColor: '#fafafa', 
+                      borderTop: subs.length > 0 ? '1px solid #f1f5f9' : 'none' 
+                    }}>
+                      {!addingToCategory || addingToCategory !== cat.name ? (
+                        <button 
+                          onClick={() => setAddingToCategory(cat.name)}
+                          style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--brand-pink)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px' }}
+                        >
+                          <Plus size={16} /> Add Subcategory
+                        </button>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', maxWidth: '600px' }}>
+                          <div 
+                            onClick={() => setShowMediaModal(true)} 
+                            style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#f1f5f9', border: '1px dashed #cbd5e1', cursor: 'pointer', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                            title="Select Icon/Image"
+                          >
+                            {newSubImage ? <img src={newSubImage} style={{width:'100%', height:'100%', objectFit:'cover'}} alt="Icon" /> : <ImageIcon size={20} color="#94a3b8" />}
+                          </div>
+                          <input 
+                            type="text" 
+                            placeholder="Enter Subcategory Name" 
+                            value={newSubName} 
+                            onChange={(e) => setNewSubName(e.target.value)} 
+                            style={{ padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', flex: 1, fontSize: '13px' }}
+                            autoFocus
+                          />
+                          <button className="btn-primary" onClick={() => submitAddSubcategory(cat.name)} style={{ padding: '6px 16px', fontSize: '13px' }}>Save</button>
+                          <button className="btn-outline" onClick={() => { setAddingToCategory(null); setNewSubName(''); setNewSubImage(''); }} style={{ padding: '6px 16px', fontSize: '13px' }}>Cancel</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
+          
+          {filtered.length === 0 && (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No categories found.</div>
+          )}
         </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
-          {Object.entries(subcategories)
-            .flatMap(([parentName, subs]) => subs.map(s => ({ ...s, parentName })))
-            .filter(sub => sub.name.toLowerCase().includes(searchTerm.toLowerCase()) || sub.parentName.toLowerCase().includes(searchTerm.toLowerCase()))
-            .map((sub, idx) => (
-              <div key={idx} style={{ 
-                height: '240px', 
-                borderRadius: '12px', 
-                overflow: 'hidden', 
-                position: 'relative', 
-                backgroundImage: sub.img ? `url(${sub.img})` : 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-              }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.8) 100%)' }}></div>
-                
-                <div style={{ position: 'absolute', top: '16px', left: '16px' }}>
-                  <span style={{ backgroundColor: '#22c55e', color: 'white', fontSize: '10px', fontWeight: 700, padding: '4px 8px', borderRadius: '4px', letterSpacing: '0.5px' }}>ACTIVE</span>
-                </div>
-
-                <div style={{ position: 'absolute', top: '16px', right: '16px' }}>
-                  <button onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === `sub-${sub.name}` ? null : `sub-${sub.name}`); }} style={{ background: 'transparent', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: 0.8 }} onMouseOver={(e) => e.currentTarget.style.opacity = '1'} onMouseOut={(e) => e.currentTarget.style.opacity = '0.8'}>
-                    <MoreHorizontal size={24} />
-                  </button>
-                  
-                  {openDropdown === `sub-${sub.name}` && (
-                    <div style={{ position: 'absolute', top: '30px', right: 0, backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', width: '160px', zIndex: 10, overflow: 'hidden' }}>
-                      <button style={{ width: '100%', textAlign: 'left', padding: '10px 16px', border: 'none', background: 'white', cursor: 'pointer', fontSize: '13px', color: '#334155' }} onClick={(e) => { e.stopPropagation(); setEditSub({ parentCat: sub.parentName, oldName: sub.name, name: sub.name, img: sub.img || '' }); setOpenDropdown(null); }}>Edit Subcategory</button>
-                      <button style={{ width: '100%', textAlign: 'left', padding: '10px 16px', border: 'none', background: 'white', cursor: 'pointer', fontSize: '13px', color: '#ef4444' }} onClick={(e) => { e.stopPropagation(); handleDeleteSubcategory(sub.parentName, sub.name); setOpenDropdown(null); }}>Delete Subcategory</button>
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ position: 'absolute', bottom: '20px', left: '20px', right: '20px', color: 'white' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 600, opacity: 0.8, textTransform: 'uppercase', marginBottom: '4px' }}>{sub.parentName}</div>
-                  <div style={{ fontSize: '20px', fontWeight: 500 }}>{sub.name}</div>
-                </div>
-              </div>
-            ))
-          }
-        </div>
-      )}
-      {showAddCat && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ width: '100%', maxWidth: '400px', backgroundColor: 'var(--admin-surface)', borderRadius: '12px', padding: '24px' }}>
-            <h3 style={{ margin: '0 0 16px' }}>Add Category</h3>
-            <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label>Category Name *</label>
-              <input type="text" className="form-control" value={newCatName} onChange={(e) => setNewCatName(e.target.value)} placeholder="e.g. Electronics" />
-            </div>
-            <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label>Icon Class (Optional)</label>
-              <input type="text" className="form-control" value={newCatIcon} onChange={(e) => setNewCatIcon(e.target.value)} placeholder="e.g. las la-laptop" />
-              <div style={{ fontSize: '11px', color: 'var(--admin-text-muted)', marginTop: '4px' }}>Uses LineAwesome icon classes.</div>
-            </div>
-            <div className="form-group" style={{ marginBottom: '24px' }}>
-              <label>Image URL (Optional)</label>
-              <input type="text" className="form-control" value={newCatImg} onChange={(e) => setNewCatImg(e.target.value)} placeholder="https://..." />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button className="btn-outline" onClick={() => setShowAddCat(false)}>Cancel</button>
-              <button className="btn-primary" onClick={handleAddCategory}>Save Category</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showAddSub && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ width: '100%', maxWidth: '400px', backgroundColor: 'var(--admin-surface)', borderRadius: '12px', padding: '24px' }}>
-            <h3 style={{ margin: '0 0 16px' }}>Add Subcategory to {showAddSub}</h3>
-            <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label>Subcategory Name *</label>
-              <input type="text" className="form-control" value={newSubName} onChange={(e) => setNewSubName(e.target.value)} placeholder="e.g. Smartphones" />
-            </div>
-            <div className="form-group" style={{ marginBottom: '24px' }}>
-              <label>Image URL (Optional)</label>
-              <input type="text" className="form-control" value={newSubImg} onChange={(e) => setNewSubImg(e.target.value)} placeholder="https://..." />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button className="btn-outline" onClick={() => setShowAddSub(null)}>Cancel</button>
-              <button className="btn-primary" onClick={handleAddSubcategory}>Save Subcategory</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {editCat && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ width: '100%', maxWidth: '400px', backgroundColor: 'var(--admin-surface)', borderRadius: '12px', padding: '24px' }}>
-            <h3 style={{ margin: '0 0 16px' }}>Edit Category</h3>
-            <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label>Category Name *</label>
-              <input type="text" className="form-control" value={editCat.name} onChange={(e) => setEditCat({...editCat, name: e.target.value})} />
-            </div>
-            <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label>Icon Class (Optional)</label>
-              <input type="text" className="form-control" value={editCat.icon} onChange={(e) => setEditCat({...editCat, icon: e.target.value})} />
-            </div>
-            <div className="form-group" style={{ marginBottom: '24px' }}>
-              <label>Image URL (Optional)</label>
-              <input type="text" className="form-control" value={editCat.img} onChange={(e) => setEditCat({...editCat, img: e.target.value})} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button className="btn-outline" onClick={() => setEditCat(null)}>Cancel</button>
-              <button className="btn-primary" onClick={handleUpdateCategory}>Save Changes</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {editSub && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ width: '100%', maxWidth: '400px', backgroundColor: 'var(--admin-surface)', borderRadius: '12px', padding: '24px' }}>
-            <h3 style={{ margin: '0 0 16px' }}>Edit Subcategory</h3>
-            <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label>Subcategory Name *</label>
-              <input type="text" className="form-control" value={editSub.name} onChange={(e) => setEditSub({...editSub, name: e.target.value})} />
-            </div>
-            <div className="form-group" style={{ marginBottom: '24px' }}>
-              <label>Image URL (Optional)</label>
-              <input type="text" className="form-control" value={editSub.img} onChange={(e) => setEditSub({...editSub, img: e.target.value})} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button className="btn-outline" onClick={() => setEditSub(null)}>Cancel</button>
-              <button className="btn-primary" onClick={handleUpdateSubcategory}>Save Changes</button>
-            </div>
-          </div>
-        </div>
+      </div>
+      
+      {showMediaModal && (
+        <MediaManagerModal 
+          onClose={() => setShowMediaModal(false)}
+          onSelect={handleMediaSelect}
+        />
       )}
     </div>
   );

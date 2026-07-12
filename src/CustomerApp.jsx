@@ -27,7 +27,8 @@ const searchSuggestions = [
 
 function CustomerApp() {
   const { categories: allCategories } = useCategories();
-  const categories = ['Home', ...allCategories.map(c => c.name)];
+  const activeCategories = allCategories.filter(c => c.isActive !== false);
+  const categories = ['Home', ...activeCategories.map(c => c.name)];
   const navigate = useNavigate();
   const { cartCount, cartTotal } = useCart();
   const { wishlistCount } = useWishlist();

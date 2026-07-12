@@ -3,7 +3,8 @@ import { useCategories } from '../utils/MockData';
 
 const CategorySubcategories = ({ category }) => {
   const { subcategories: categorySubcategories } = useCategories();
-  const subcategories = categorySubcategories[category] || categorySubcategories['Women'];
+  const allSubs = categorySubcategories[category] || categorySubcategories['Women'] || [];
+  const subcategories = allSubs.filter(sub => sub.isActive !== false);
 
   return (
     <div style={{ padding: '0 15px', marginBottom: '15px' }}>

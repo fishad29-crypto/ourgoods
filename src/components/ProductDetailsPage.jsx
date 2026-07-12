@@ -460,7 +460,20 @@ const ProductDetailsPage = () => {
             <span title={product.title} style={{ color: 'var(--brand-pink)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.title}</span>
           </div>
           {(() => {
-            const productImages = product.images && product.images.length > 0 ? product.images : [product.image];
+            const productImages = product.images && product.images.length > 0 
+              ? product.images 
+              : (product.image ? [{ url: product.image, type: product.imageType }] : []);
+            
+            const renderMedia = (imgObj, isMain = false) => {
+              const url = typeof imgObj === 'object' && imgObj !== null ? (imgObj.url || imgObj) : imgObj;
+              const isVideo = (typeof imgObj === 'object' && imgObj !== null && imgObj.type && imgObj.type.startsWith('video/')) || 
+                              (typeof url === 'string' && (url.match(/\.(mp4|webm|ogg)$/i) || url.startsWith('data:video/')));
+              
+              if (isVideo) {
+                return <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} autoPlay={isMain} muted loop playsInline />;
+              }
+              return <img src={url} alt="Product view" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+            };
             
             const handleScroll = (e) => {
               const scrollLeft = e.target.scrollLeft;
@@ -477,7 +490,7 @@ const ProductDetailsPage = () => {
                     <div className="pdp-mobile-gallery" onScroll={handleScroll}>
                       {productImages.map((img, idx) => (
                         <div key={idx} className="pdp-mobile-gallery-item">
-                          <img src={img} alt={`Slide ${idx}`} />
+                          {renderMedia(img, true)}
                         </div>
                       ))}
                     </div>
@@ -487,7 +500,7 @@ const ProductDetailsPage = () => {
                   {/* Desktop Gallery */}
                   <div className="pdp-desktop-gallery">
                     <div className="pdp-desktop-main-image">
-                      <img src={productImages[activeImageIndex]} alt="Main product view" />
+                      {renderMedia(productImages[activeImageIndex], true)}
                       
                       <div 
                         onClick={(e) => {
@@ -537,7 +550,7 @@ const ProductDetailsPage = () => {
                             onMouseEnter={() => setActiveImageIndex(idx)}
                             onClick={() => setActiveImageIndex(idx)}
                           >
-                            <img src={img} alt={`Thumbnail ${idx}`} />
+                            {renderMedia(img, false)}
                           </div>
                         ))}
                       </div>
@@ -631,6 +644,23 @@ const ProductDetailsPage = () => {
           <div className="pdp-info-card" style={{ marginTop: 0, borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
             
             <h1 style={{ fontSize: '18px', lineHeight: '1.4', fontWeight: 700, color: '#111', margin: '0 0 12px 0' }}>
+              {product.ribbon && product.ribbon !== 'None' && (
+                <span style={{ 
+                  display: 'inline-block', 
+                  background: 'var(--brand-pink, #E43292)', 
+                  color: '#fff', 
+                  fontSize: '12px', 
+                  fontWeight: 700, 
+                  padding: '2px 8px', 
+                  borderRadius: '4px', 
+                  marginRight: '8px', 
+                  verticalAlign: 'middle',
+                  position: 'relative',
+                  top: '-2px'
+                }}>
+                  {product.ribbon}
+                </span>
+              )}
               {product.title}
             </h1>
 

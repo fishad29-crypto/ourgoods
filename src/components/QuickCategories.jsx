@@ -44,7 +44,7 @@ const quickLinks = [
   },
   { 
     id: 6, 
-    name: "Combo Offers", 
+    name: "Combo & Choice", 
     renderIcon: () => (
       <div style={{ background: '#7b41d9', color: '#fff', borderRadius: '18px', width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <i className="las la-box" style={{ fontSize: '32px' }}></i>

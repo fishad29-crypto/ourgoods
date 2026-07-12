@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useCategories } from '../utils/MockData';
 
 const AllCategorySection = ({ onCategorySelect, onClose }) => {
-  const { categories: allCategories, subcategories: categorySubcategories } = useCategories();
-  const [activeCat, setActiveCat] = useState(allCategories[0].name);
+  const { categories, subcategories: categorySubcategories } = useCategories();
+  const allCategories = categories.filter(c => c.isActive !== false);
+  const [activeCat, setActiveCat] = useState(allCategories[0]?.name || '');
   const sectionRefs = useRef({});
   const isClickingRef = useRef(false);
 
@@ -138,7 +139,7 @@ const AllCategorySection = ({ onCategorySelect, onClose }) => {
 
                  {/* Subcategories Grid */}
                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px 15px' }}>
-                    {(categorySubcategories[cat.name] || []).map((sub, i) => (
+                    {(categorySubcategories[cat.name] || []).filter(sub => sub.isActive !== false).map((sub, i) => (
                        <div key={i} onClick={() => onCategorySelect && onCategorySelect(cat.name)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                           <img src={sub.img} alt={sub.name} style={{ width: '100%', maxWidth: '65px', aspectRatio: '1/1', borderRadius: '50%', objectFit: 'cover', border: '1px solid #eaeaea', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }} />
                           <span style={{ fontSize: '10px', textAlign: 'center', fontWeight: '600', color: '#444', lineHeight: '1.2' }}>{sub.name}</span>

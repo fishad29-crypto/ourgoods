@@ -54,13 +54,16 @@ let globalProductsCache = null;
 export const getAllProducts = () => {
   if (globalProductsCache) return globalProductsCache;
 
-  const cached = localStorage.getItem('mockProductsCache');
+  const cached = localStorage.getItem('userProductsCache');
   if (cached) {
     try {
-      // Clear cache once so we don't serve old fake data
-      localStorage.removeItem('mockProductsCache');
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        globalProductsCache = parsed;
+        return globalProductsCache;
+      }
     } catch (e) {
-      // ignore
+      console.error("Failed to parse userProductsCache", e);
     }
   }
 
@@ -105,6 +108,7 @@ export const getAllProducts = () => {
   });
 
   globalProductsCache = products;
+  localStorage.setItem('userProductsCache', JSON.stringify(globalProductsCache));
   return products;
 };
 
@@ -123,7 +127,11 @@ export const generateProducts = (category, count = 50) => {
 
   let filtered = all;
   if (category && category !== 'All' && category !== 'recommended') {
-    filtered = all.filter(p => p.category === category);
+    filtered = all.filter(p => {
+      const pCats = Array.isArray(p.category) ? p.category : [p.category];
+      const pPlacements = Array.isArray(p.placements) ? p.placements : (p.placements ? p.placements.split(', ') : []);
+      return pCats.includes(category) || pPlacements.includes(category) || (category === 'Flash Sale' && p.isFlashSale);
+    });
   }
   // Ensure newest products appear at the top
   const sorted = [...filtered].sort((a, b) => b.createdAt - a.createdAt);
@@ -149,10 +157,13 @@ export const addProductToFrontend = (productData) => {
   
   // Format the product to match the frontend expected structure
   const newProduct = {
-    id: productData.sku || 'gen_new_' + Date.now(),
+    id: productData.id || productData.sku || 'gen_new_' + Date.now(),
+    sku: productData.sku || productData.id || 'gen_new_' + Date.now(),
     title: productData.name || 'New Product',
     category: productData.category || 'Women', // default category
-    image: productData.images && productData.images.length > 0 ? productData.images[0].url : "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+    image: productData.images && productData.images.length > 0 ? (typeof productData.images[0] === 'string' ? productData.images[0] : productData.images[0].url) : "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+    imageType: productData.images && productData.images.length > 0 ? (typeof productData.images[0] === 'object' ? productData.images[0].type : "image/jpeg") : "image/jpeg",
+    images: productData.images || [],
     originalPrice: parseFloat(productData.regularPrice) || 1000,
     price: parseFloat(productData.salePrice) || parseFloat(productData.regularPrice) || 800,
     discount: 0,
@@ -182,7 +193,9 @@ export const addProductToFrontend = (productData) => {
             name: attr.name,
             options: attr.options.split(',').map(s => s.trim()).filter(Boolean)
           }))
-      : []
+      : [],
+    placements: productData.placements || [],
+    ...productData, // Spreading productData to ensure ribbon, description, and other custom fields are saved
   };
 
   if (newProduct.originalPrice > newProduct.price) {
@@ -190,7 +203,7 @@ export const addProductToFrontend = (productData) => {
   }
 
   // Check if product already exists (Edit Mode)
-  const existingIndex = globalProductsCache.findIndex(p => p.id === newProduct.id || p.sku === newProduct.id);
+  const existingIndex = globalProductsCache.findIndex(p => p.id === newProduct.id || (p.sku && p.sku === newProduct.sku));
   
   if (existingIndex !== -1) {
     // Update existing
@@ -199,11 +212,15 @@ export const addProductToFrontend = (productData) => {
     // Push to the very beginning of the cache so it shows up first everywhere
     globalProductsCache.unshift(newProduct);
   }
+  
+  // Persist to local storage so they aren't lost on refresh
+  localStorage.setItem('userProductsCache', JSON.stringify(globalProductsCache));
 };
 
 export const deleteProduct = (productId) => {
   if (globalProductsCache) {
     globalProductsCache = globalProductsCache.filter(p => p.id !== productId && p.sku !== productId);
+    localStorage.setItem('userProductsCache', JSON.stringify(globalProductsCache));
   }
 };
 
@@ -304,12 +321,29 @@ const defaultSubcategories = {
 
 const getInitialCategories = () => {
   const stored = localStorage.getItem('mockCategories');
-  return stored ? JSON.parse(stored) : [...defaultCategories];
+  if (stored) {
+    const parsed = JSON.parse(stored);
+    // Add any missing default categories
+    const missing = defaultCategories.filter(dc => !parsed.find(pc => pc.name === dc.name));
+    return [...parsed, ...missing];
+  }
+  return [...defaultCategories];
 };
 
 const getInitialSubcategories = () => {
   const stored = localStorage.getItem('mockSubcategories');
-  return stored ? JSON.parse(stored) : {...defaultSubcategories};
+  if (stored) {
+    const parsed = JSON.parse(stored);
+    // Merge any missing default subcategories
+    const merged = { ...parsed };
+    for (const key in defaultSubcategories) {
+      if (!merged[key]) {
+        merged[key] = defaultSubcategories[key];
+      }
+    }
+    return merged;
+  }
+  return {...defaultSubcategories};
 };
 
 let globalCategories = getInitialCategories();
@@ -334,7 +368,7 @@ export const addCategory = (cat) => {
 
 export const updateCategory = (oldName, newCat) => {
   globalCategories = globalCategories.map(c => c.name === oldName ? { ...c, ...newCat } : c);
-  if (oldName !== newCat.name) {
+  if (newCat.name && oldName !== newCat.name) {
     globalSubcategories[newCat.name] = globalSubcategories[oldName] || [];
     delete globalSubcategories[oldName];
   }

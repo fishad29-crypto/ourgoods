@@ -32,7 +32,9 @@ const ProductsCatalog = () => {
     price: p.price || p.salePrice || p.originalPrice,
     stock: p.stock || 100, // mock stock
     status: p.status || 'Active',
-    image: p.image || (p.images && p.images[0] ? p.images[0].url : '')
+    image: p.image || (p.images && p.images[0] ? p.images[0].url : ''),
+    imageType: p.imageType || (p.images && p.images[0] ? p.images[0].type : ''),
+    images: p.images || []
   }));
 
   const filteredProducts = catalogData.filter(product => {
@@ -137,16 +139,43 @@ const ProductsCatalog = () => {
                   <td><input type="checkbox" /></td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '40px', height: '40px', backgroundColor: 'var(--admin-bg)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--admin-text-muted)', overflow: 'hidden' }}>
-                        {product.image ? (
-                          <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {product.images && product.images.length > 0 ? (
+                          product.images.slice(0, 1).map((imgObj, idx) => {
+                            const url = typeof imgObj === 'string' ? imgObj : imgObj.url;
+                            const isVideo = (typeof imgObj === 'object' && imgObj.type && imgObj.type.startsWith('video/')) || (typeof url === 'string' && (url.match(/\.(mp4|webm|ogg)$/i) || url.startsWith('data:video/')));
+                            return (
+                              <div key={idx} style={{ width: '40px', height: '40px', backgroundColor: 'var(--admin-bg)', borderRadius: '4px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                {isVideo ? (
+                                  <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} autoPlay muted loop playsInline />
+                                ) : (
+                                  <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                )}
+                              </div>
+                            );
+                          })
                         ) : (
-                          <ImageIcon size={20} />
+                          <div style={{ width: '40px', height: '40px', backgroundColor: 'var(--admin-bg)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--admin-text-muted)', overflow: 'hidden' }}>
+                            {product.image ? (
+                              (product.image.match(/\.(mp4|webm|ogg)$/i) || product.image.startsWith('data:video/') || (product.imageType && product.imageType.startsWith('video/'))) ? (
+                                <video src={product.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} autoPlay muted loop playsInline />
+                              ) : (
+                                <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              )
+                            ) : (
+                              <ImageIcon size={20} />
+                            )}
+                          </div>
                         )}
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ fontWeight: 600 }}>{product.name}</span>
-                        <span style={{ fontSize: '11px', color: 'var(--admin-text-muted)' }}>{product.brand}</span>
+                        {product.brand && (
+                          <span style={{ fontSize: '13px', color: 'var(--admin-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>•</span>
+                            {product.brand}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </td>

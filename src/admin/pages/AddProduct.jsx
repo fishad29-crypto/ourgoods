@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Save, UploadCloud, X, Plus, Sparkles, Image as ImageIcon, Loader2, Trash2, Bold, Italic, Underline, Link, List, ListOrdered, AlignLeft, Info, Star, ChevronDown, ChevronRight, Globe, Factory, Home } from 'lucide-react';
+import { ArrowLeft, Save, UploadCloud, X, Plus, Sparkles, Image as ImageIcon, Loader2, Trash2, Bold, Italic, Underline, Link, List, ListOrdered, AlignLeft, Info, Star, ChevronDown, ChevronRight, Globe, Factory, Home, PlayCircle, Check, Edit } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import Tesseract from 'tesseract.js';
 import MediaManagerModal from '../../components/MediaManagerModal';
 import RichTextEditor from '../components/RichTextEditor';
-import { addProductToFrontend, getProductById, useCategories } from '../../utils/MockData';
+import { addProductToFrontend, getProductById, useCategories, getAllProducts } from '../../utils/MockData';
 import '../admin.css';
 
 
@@ -73,7 +73,34 @@ const AddProduct = () => {
   const [showMediaManager, setShowMediaManager] = useState(false);
   const [importUrl, setImportUrl] = useState('');
   const [draggedImgIdx, setDraggedImgIdx] = useState(null);
+  const [removingIdx, setRemovingIdx] = useState(null);
+  const [ribbons, setRibbons] = useState(() => {
+    try {
+      const saved = localStorage.getItem('customRibbons');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [
+      { value: '', label: 'None' },
+      { value: 'Best Seller', label: 'Best Seller' },
+      { value: 'Exclusive', label: 'Exclusive' },
+      { value: 'Featured', label: 'Featured' },
+      { value: 'Limited Time', label: 'Limited Time' },
+      { value: 'New Arrival', label: 'New Arrival' },
+      { value: 'Sale', label: 'Sale' },
+      { value: 'Trending', label: 'Trending' }
+    ];
+  });
+  const [showRibbonMenu, setShowRibbonMenu] = useState(false);
+  const [newRibbonText, setNewRibbonText] = useState('');
+  const [editingRibbon, setEditingRibbon] = useState(null);
+  
+  const saveRibbons = (newRibbons) => {
+    setRibbons(newRibbons);
+    localStorage.setItem('customRibbons', JSON.stringify(newRibbons));
+  };
+
   const [colorImageMap, setColorImageMap] = useState(() => {
+
     try {
       const saved = localStorage.getItem('addProductData');
       if (saved) {
@@ -132,10 +159,11 @@ const AddProduct = () => {
       if (product) {
         setFormData(prev => ({
           ...prev,
+          id: product.id,
           name: product.title || '',
           regularPrice: product.originalPrice || product.price || '',
           salePrice: product.price || '',
-          sku: `SKU-${product.id.split('_')[1] || product.id}`,
+          sku: product.sku || product.id || '',
           category: product.category || '',
           attributes: [
             { name: 'Color', options: (product.colors || []).join(', ') },
@@ -143,8 +171,8 @@ const AddProduct = () => {
           ]
         }));
         
-        const imgs = product.images && product.images.length > 0 ? product.images : (product.image ? [product.image] : []);
-        setImages(imgs.map(url => ({ name: 'product-image.jpg', url, isExisting: true })));
+        const imgs = Array.isArray(product.images) && product.images.length > 0 ? product.images : (product.image ? [product.image] : []);
+        setImages(imgs.map(img => typeof img === 'string' ? { name: 'product-image.jpg', url: img, type: 'image/jpeg', isExisting: true } : { ...img, isExisting: true }));
       }
     }
   }, [location.search]);
@@ -286,14 +314,20 @@ const AddProduct = () => {
 
   const handleMediaSelect = async (selectedItems) => {
     setShowMediaManager(false);
-    if (!selectedItems || selectedItems.length === 0) return;
+    
+    // Instead of appending, we want the Media Manager to completely dictate the selection.
+    // If the user unselected something in the Media Manager, it will be removed here.
+    if (!selectedItems) return;
 
-    const localFiles = selectedItems.filter(item => item instanceof File);
-    const existingFiles = selectedItems.filter(item => !(item instanceof File));
+    // Filter out local files which need to be compressed
+    const localFiles = selectedItems.filter(item => item instanceof File || item.rawFile);
+    // Note: our updated MediaManagerModal returns rawFile inside the object if it's local
+    
+    // Keep items that don't need compression (existing Site Files)
+    const existingFiles = selectedItems.filter(item => !item.rawFile && !(item instanceof File));
 
-    if (existingFiles.length > 0) {
-      setImages(prev => [...prev, ...existingFiles]);
-    }
+    // We fully replace the state so two-way sync works
+    setImages(existingFiles);
 
     if (localFiles.length > 0) {
       setIsCompressing(true);
@@ -383,7 +417,14 @@ const AddProduct = () => {
   };
 
   const removeImage = (index) => {
-    setImages(images.filter((_, i) => i !== index));
+    // Trigger animation
+    setRemovingIdx(index);
+    
+    // Actually remove the image after the animation completes
+    setTimeout(() => {
+      setImages(prev => prev.filter((_, i) => i !== index));
+      setRemovingIdx(null);
+    }, 200);
   };
 
   const mockProducts = [
@@ -698,7 +739,7 @@ const AddProduct = () => {
         justifyContent: 'space-between', 
         alignItems: 'center',
         position: 'sticky',
-        top: '0',
+        top: 'var(--header-height, 70px)',
         zIndex: 50,
         backgroundColor: 'var(--admin-bg, #f4f6f8)',
         padding: '16px 0',
@@ -785,7 +826,7 @@ const AddProduct = () => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '16px' }}>
                 {images.map((img, idx) => (
                   <div 
-                    key={img.url || img.name || idx} 
+                    key={`${img.url || img.name}-${idx}`} 
                     draggable
                     onDragStart={(e) => handleDragStart(e, idx)}
                     onDragEnter={(e) => handleDragEnter(e, idx)}
@@ -800,21 +841,32 @@ const AddProduct = () => {
                       overflow: 'hidden', 
                       border: idx === 0 ? '2px solid var(--brand-pink)' : '1px solid #e2e8f0', 
                       cursor: draggedImgIdx === idx ? 'grabbing' : 'grab', 
-                      transition: 'all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)', 
+                      transition: 'all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)', 
                       boxShadow: draggedImgIdx === idx ? '0 10px 15px -3px rgba(0, 0, 0, 0.2)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                      opacity: draggedImgIdx === idx ? 0.3 : 1,
-                      transform: draggedImgIdx === idx ? 'scale(0.95)' : 'scale(1)',
+                      opacity: draggedImgIdx === idx ? 0.3 : (removingIdx === idx ? 0 : 1),
+                      transform: draggedImgIdx === idx ? 'scale(0.95)' : (removingIdx === idx ? 'scale(0)' : 'scale(1)'),
+                      transformOrigin: 'center center',
                       zIndex: draggedImgIdx === idx ? 10 : 1
                     }}
                   >
                     {idx === 0 && (
-                      <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(228,50,146,0.95)', color: '#fff', fontSize: '9px', fontWeight: 700, padding: '4px 8px', borderRadius: '12px', zIndex: 10, boxShadow: '0 2px 4px rgba(228,50,146,0.3)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(228,50,146,0.95)', color: '#fff', fontSize: '9px', fontWeight: 700, padding: '4px 8px', borderRadius: '12px', zIndex: 10, boxShadow: '0 2px 4px rgba(228,50,146,0.3)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Star size={10} fill="#fff" /> MAIN
                       </div>
                     )}
+                    {idx === 0 && formData.ribbon && formData.ribbon !== 'None' && (
+                      <div style={{ position: 'absolute', top: '8px', right: '8px', background: '#334155', color: '#fff', fontSize: '9px', fontWeight: 700, padding: '4px 8px', borderRadius: '12px', zIndex: 10, boxShadow: '0 2px 4px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {formData.ribbon}
+                      </div>
+                    )}
                     {img.url ? (
-                      (img.type && img.type.startsWith('video/')) || img.url.match(/\.(mp4|webm|ogg)$/i) ? (
-                        <video src={img.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} autoPlay muted loop playsInline />
+                      (img.type && img.type.startsWith('video/')) || (img.url && img.url.match(/\.(mp4|webm|ogg)$/i)) ? (
+                        <>
+                          <video src={img.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} autoPlay muted loop playsInline />
+                          <div style={{ position: 'absolute', bottom: '8px', right: '8px', background: 'rgba(0,0,0,0.5)', borderRadius: '50%', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <PlayCircle size={16} color="#fff" />
+                          </div>
+                        </>
                       ) : (
                         <img src={img.url} alt="upload" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       )
@@ -824,7 +876,9 @@ const AddProduct = () => {
                       </div>
                     )}
                     <button 
-                      onClick={(e) => { e.stopPropagation(); removeImage(idx); }} 
+                      type="button"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeImage(idx); }} 
                       style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,255,255,0.9)', color: '#ef4444', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.15)', transition: 'all 0.2s', zIndex: 10 }}
                       onMouseOver={(e) => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.color = '#fff'; }}
                       onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.9)'; e.currentTarget.style.color = '#ef4444'; }}
@@ -863,22 +917,169 @@ const AddProduct = () => {
                 <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#475569', marginBottom: '8px' }}>
                   Ribbon <Info size={14} color="#94a3b8" />
                 </label>
-                <select 
-                  name="ribbon"
-                  className="form-input" 
-                  value={formData.ribbon || ''}
-                  onChange={handleChange}
-                  style={{ padding: '12px 16px', borderRadius: '8px', cursor: 'pointer', appearance: 'none', background: '#fff url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E") no-repeat right 1rem top 50%', backgroundSize: "10px auto", paddingRight: "32px" }}
-                >
-                  <option value="">None</option>
-                  <option value="New Arrival">New Arrival</option>
-                  <option value="Best Seller">Best Seller</option>
-                  <option value="Sale">Sale</option>
-                  <option value="Trending">Trending</option>
-                  <option value="Featured">Featured</option>
-                  <option value="Limited Time">Limited Time</option>
-                  <option value="Exclusive">Exclusive</option>
-                </select>
+                <div style={{ position: 'relative' }}>
+                  <div 
+                    onClick={() => setShowRibbonMenu(!showRibbonMenu)}
+                    style={{
+                      padding: '10px 14px',
+                      border: '1px solid var(--admin-border)',
+                      borderRadius: '8px',
+                      backgroundColor: '#fff',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '14px',
+                      color: '#334155'
+                    }}
+                  >
+                    <span>{ribbons.find(r => r.value === (formData.ribbon || ''))?.label || 'None'}</span>
+                    <ChevronDown size={16} />
+                  </div>
+                  
+                  {showRibbonMenu && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      width: '100%',
+                      marginTop: '4px',
+                      backgroundColor: '#fff',
+                      border: '1px solid var(--admin-border)',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                      zIndex: 10,
+                      maxHeight: '300px',
+                      overflowY: 'auto'
+                    }}>
+                      {ribbons.map(option => (
+                        <div 
+                          key={option.value}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '8px 12px',
+                            borderBottom: '1px solid #f1f5f9',
+                            backgroundColor: (formData.ribbon || '') === option.value ? '#f8fafc' : '#fff',
+                          }}
+                        >
+                          {editingRibbon === option.value && option.value !== '' ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+                              <input 
+                                type="text"
+                                autoFocus
+                                value={newRibbonText}
+                                onChange={(e) => setNewRibbonText(e.target.value)}
+                                style={{ flex: 1, padding: '4px 8px', border: '1px solid var(--admin-border)', borderRadius: '4px' }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && newRibbonText.trim()) {
+                                    const updated = ribbons.map(r => r.value === option.value ? { value: newRibbonText.trim(), label: newRibbonText.trim() } : r);
+                                    saveRibbons(updated);
+                                    if (formData.ribbon === option.value) {
+                                      setFormData(prev => ({ ...prev, ribbon: newRibbonText.trim() }));
+                                    }
+                                    setEditingRibbon(null);
+                                  } else if (e.key === 'Escape') {
+                                    setEditingRibbon(null);
+                                  }
+                                }}
+                              />
+                              <button type="button" onClick={() => {
+                                if(newRibbonText.trim()) {
+                                  const updated = ribbons.map(r => r.value === option.value ? { value: newRibbonText.trim(), label: newRibbonText.trim() } : r);
+                                  saveRibbons(updated);
+                                  if (formData.ribbon === option.value) {
+                                    setFormData(prev => ({ ...prev, ribbon: newRibbonText.trim() }));
+                                  }
+                                }
+                                setEditingRibbon(null);
+                              }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand-pink)' }}><Check size={16}/></button>
+                              <button type="button" onClick={() => setEditingRibbon(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><X size={16}/></button>
+                            </div>
+                          ) : (
+                            <>
+                              <div 
+                                style={{ flex: 1, cursor: 'pointer', color: (formData.ribbon || '') === option.value ? 'var(--brand-pink)' : '#334155', fontSize: '14px' }}
+                                onClick={() => {
+                                  setFormData(prev => ({ ...prev, ribbon: option.value }));
+                                  setShowRibbonMenu(false);
+                                }}
+                              >
+                                {option.label}
+                              </div>
+                              {option.value !== '' && (
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  <button type="button" onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingRibbon(option.value);
+                                    setNewRibbonText(option.label);
+                                  }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><Edit size={14}/></button>
+                                  <button type="button" onClick={(e) => {
+                                    e.stopPropagation();
+                                    if(window.confirm('Delete this ribbon?')) {
+                                      const updated = ribbons.filter(r => r.value !== option.value);
+                                      saveRibbons(updated);
+                                      if (formData.ribbon === option.value) {
+                                        setFormData(prev => ({ ...prev, ribbon: '' }));
+                                      }
+                                    }
+                                  }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--status-danger)' }}><Trash2 size={14}/></button>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      ))}
+                      
+                      <div style={{ padding: '8px 12px', borderTop: '1px solid var(--admin-border)', backgroundColor: '#fafafa' }}>
+                        {editingRibbon === 'NEW' ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input 
+                              type="text"
+                              autoFocus
+                              placeholder="New ribbon..."
+                              value={newRibbonText}
+                              onChange={(e) => setNewRibbonText(e.target.value)}
+                              style={{ flex: 1, padding: '6px 8px', border: '1px solid var(--admin-border)', borderRadius: '4px', fontSize: '13px' }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && newRibbonText.trim()) {
+                                  const text = newRibbonText.trim();
+                                  if(!ribbons.some(r => r.value === text)) {
+                                    saveRibbons([...ribbons, { value: text, label: text }]);
+                                  }
+                                  setEditingRibbon(null);
+                                  setNewRibbonText('');
+                                } else if (e.key === 'Escape') {
+                                  setEditingRibbon(null);
+                                }
+                              }}
+                            />
+                            <button type="button" onClick={() => {
+                              if(newRibbonText.trim()) {
+                                const text = newRibbonText.trim();
+                                if(!ribbons.some(r => r.value === text)) {
+                                  saveRibbons([...ribbons, { value: text, label: text }]);
+                                }
+                              }
+                              setEditingRibbon(null);
+                              setNewRibbonText('');
+                            }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand-pink)' }}><Check size={16}/></button>
+                            <button type="button" onClick={() => { setEditingRibbon(null); setNewRibbonText(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><X size={16}/></button>
+                          </div>
+                        ) : (
+                          <button 
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setEditingRibbon('NEW'); setNewRibbonText(''); }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--brand-pink)', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', width: '100%', padding: '4px 0' }}
+                          >
+                            <Plus size={14} /> Add New Ribbon
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           {/* Variants */}
@@ -1486,73 +1687,212 @@ const AddProduct = () => {
           
           {/* Categories */}
           <div className="form-section" style={{ backgroundColor: 'var(--admin-surface)', padding: '24px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '16px', fontWeight: 600 }}>Categories</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Categories</h3>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {(() => {
+                  const allCatNames = allCategories.filter(c => c.isActive !== false).map(c => c.name);
+                  const currentCats = Array.isArray(formData.category) ? formData.category : (formData.category ? formData.category.split(', ') : []);
+                  const isAllSelected = currentCats.length === allCatNames.length && allCatNames.length > 0;
+                  const isNoneSelected = currentCats.length === 0;
+
+                  return (
+                    <>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          if (isAllSelected) {
+                            setFormData(prev => ({ ...prev, category: [], subcategory: [] }));
+                          } else {
+                            const allSubcatNames = Object.values(subcategories).flat();
+                            setFormData(prev => ({ ...prev, category: allCatNames, subcategory: allSubcatNames }));
+                          }
+                        }}
+                        style={{ 
+                          background: isAllSelected ? '#fff0f6' : '#f8fafc', 
+                          border: isAllSelected ? '1px solid #fbcfe8' : '1px solid #e2e8f0', 
+                          borderRadius: '4px', padding: '4px 8px', fontSize: '12px', cursor: 'pointer', 
+                          color: isAllSelected ? 'var(--brand-pink)' : '#475569', fontWeight: 500, transition: 'all 0.2s' 
+                        }}
+                        onMouseOver={(e) => {
+                          if (!isAllSelected) e.currentTarget.style.backgroundColor = '#f1f5f9';
+                        }}
+                        onMouseOut={(e) => {
+                          if (!isAllSelected) e.currentTarget.style.backgroundColor = '#f8fafc';
+                        }}
+                      >
+                        Select All
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          if (isNoneSelected) {
+                            const allSubcatNames = Object.values(subcategories).flat();
+                            setFormData(prev => ({ ...prev, category: allCatNames, subcategory: allSubcatNames }));
+                          } else {
+                            setFormData(prev => ({ ...prev, category: [], subcategory: [] }));
+                          }
+                        }}
+                        style={{ 
+                          background: isNoneSelected ? '#fff0f6' : '#f8fafc', 
+                          border: isNoneSelected ? '1px solid #fbcfe8' : '1px solid #e2e8f0', 
+                          borderRadius: '4px', padding: '4px 8px', fontSize: '12px', cursor: 'pointer', 
+                          color: isNoneSelected ? 'var(--brand-pink)' : '#475569', fontWeight: 500, transition: 'all 0.2s' 
+                        }}
+                        onMouseOver={(e) => {
+                          if (!isNoneSelected) e.currentTarget.style.backgroundColor = '#f1f5f9';
+                        }}
+                        onMouseOut={(e) => {
+                          if (!isNoneSelected) e.currentTarget.style.backgroundColor = '#f8fafc';
+                        }}
+                      >
+                        Unselect All
+                      </button>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
             
             <div style={{ maxHeight: '350px', overflowY: 'auto', paddingRight: '8px', display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
-              {Object.keys(categories).map(cat => {
-                const subcats = [...(categories[cat] || [])];
+              {allCategories.filter(c => c.isActive !== false).map(catObj => {
+                const cat = catObj.name;
+                const subcatsList = categories[cat] || [];
                 const currentCats = Array.isArray(formData.category) ? formData.category : (formData.category ? formData.category.split(', ') : []);
                 const currentSubcats = Array.isArray(formData.subcategory) ? formData.subcategory : (formData.subcategory ? formData.subcategory.split(', ') : []);
                 const isCatChecked = currentCats.includes(cat);
-                const selectedSubcatsCount = subcats.filter(sub => currentSubcats.includes(sub)).length;
+                const allProducts = getAllProducts();
+                const catProductCount = allProducts.filter(p => Array.isArray(p.category) ? p.category.includes(cat) : p.category === cat).length;
                 
                 return (
                   <div key={cat}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', color: '#334155', fontWeight: 500, userSelect: 'none' }}>
-                          <input 
-                            type="checkbox" 
-                            checked={isCatChecked}
-                            onChange={(e) => {
-                              const newCats = e.target.checked 
-                                ? [...currentCats, cat] 
-                                : currentCats.filter(c => c !== cat);
-                              setFormData(prev => ({ ...prev, category: newCats }));
-                            }}
-                            className="custom-checkbox"
-                          />
-                          {allCategories.find(c => c.name === cat)?.icon && (
-                            <i className={allCategories.find(c => c.name === cat).icon} style={{ fontSize: '18px', color: 'var(--brand-pink)' }}></i>
-                          )}
-                          {cat}
-                          {selectedSubcatsCount > 0 && (
-                            <span style={{ color: '#94a3b8', fontSize: '13px' }}>({selectedSubcatsCount})</span>
-                          )}
-                        </label>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        {subcats.length > 0 && (
-                          <button 
-                            type="button" 
-                            onClick={(e) => { e.preventDefault(); setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] })); }}
-                            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#64748b' }}
-                          >
-                            {expandedCats[cat] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                          </button>
+                    <div 
+                      onClick={(e) => {
+                        if (subcatsList.length > 0) {
+                          setExpandedCats(prev => {
+                            if (prev[cat]) return { ...prev, [cat]: false };
+                            return { [cat]: true }; // close others, open this
+                          });
+                        } else {
+                          const newCats = !isCatChecked 
+                            ? [...currentCats, cat] 
+                            : currentCats.filter(c => c !== cat);
+                          setFormData(prev => ({ ...prev, category: newCats }));
+                        }
+                      }}
+                      style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        width: '100%',
+                        cursor: 'pointer',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: isCatChecked ? '1px solid var(--brand-pink)' : '1px solid transparent',
+                        backgroundColor: isCatChecked ? '#fff0f6' : 'transparent',
+                        transition: 'all 0.2s',
+                        userSelect: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = isCatChecked ? '#fff0f6' : '#f8fafc'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = isCatChecked ? '#fff0f6' : 'transparent'}
+                    >
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px',
+                        fontSize: '14px',
+                        color: isCatChecked ? 'var(--brand-pink)' : '#334155',
+                        fontWeight: isCatChecked ? 600 : 500
+                      }}>
+                        <input 
+                          type="checkbox" 
+                          checked={isCatChecked}
+                          onChange={(e) => {
+                            const newCats = e.target.checked 
+                              ? [...currentCats, cat] 
+                              : currentCats.filter(c => c !== cat);
+                            setFormData(prev => ({ ...prev, category: newCats }));
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="custom-checkbox"
+                          style={{ cursor: 'pointer' }}
+                        />
+                        {catObj.icon && (
+                          <i className={catObj.icon} style={{ fontSize: '18px', color: isCatChecked ? 'var(--brand-pink)' : '#94a3b8' }}></i>
                         )}
+                        {cat}
+                        <span style={{ color: '#94a3b8', fontSize: '13px', marginLeft: '4px' }}>({subcatsList.filter(s => s.isActive !== false).length})</span>
+                      </div>
+                      <div style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 500 }}>
+                        {catProductCount} {catProductCount === 1 ? 'Product' : 'Products'}
                       </div>
                     </div>
                     
                     {/* Subcategories (Indented & Collapsible) */}
                     {expandedCats[cat] && (
-                    <div style={{ paddingLeft: '34px', marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {subcats.length > 0 && subcats.map(sub => {
-                        const isSubChecked = currentSubcats.includes(sub);
+                    <div style={{ paddingLeft: '34px', marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {subcatsList.filter(s => s.isActive !== false).length > 0 && subcatsList.filter(s => s.isActive !== false).map(sub => {
+                        const subName = sub.name || sub; // fallback if sub is just a string
+                        const isSubChecked = currentSubcats.includes(subName);
+                        const subProductCount = allProducts.filter(p => Array.isArray(p.subcategory) ? p.subcategory.includes(subName) : p.subcategory === subName).length;
                         return (
-                          <div key={sub} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', color: '#64748b', cursor: 'pointer', fontWeight: 400 }}>
+                          <div key={subName} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div 
+                              onClick={(e) => {
+                                const newSubcats = !isSubChecked 
+                                  ? [...currentSubcats, subName]
+                                  : currentSubcats.filter(s => s !== subName);
+                                
+                                let newCats = [...currentCats];
+                                if (!isSubChecked && !newCats.includes(cat)) {
+                                  newCats.push(cat);
+                                }
+
+                                setFormData(prev => ({ 
+                                  ...prev, 
+                                  subcategory: newSubcats,
+                                  category: newCats
+                                }));
+                              }}
+                              style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '8px', 
+                                fontSize: '13.5px', 
+                                color: isSubChecked ? 'var(--brand-pink)' : '#64748b', 
+                                cursor: 'pointer', 
+                                fontWeight: isSubChecked ? 500 : 400,
+                                padding: '6px 12px',
+                                borderRadius: '6px',
+                                border: isSubChecked ? '1px solid var(--brand-pink)' : '1px solid transparent',
+                                backgroundColor: isSubChecked ? '#fff0f6' : 'transparent',
+                                width: '100%',
+                                transition: 'all 0.2s',
+                                boxSizing: 'border-box'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.backgroundColor = isSubChecked ? '#fff0f6' : '#f8fafc'}
+                              onMouseOut={(e) => e.currentTarget.style.backgroundColor = isSubChecked ? '#fff0f6' : 'transparent'}
+                            >
                               <input 
                                 type="checkbox" 
                                 checked={isSubChecked}
                                 onChange={(e) => {
                                   const newSubcats = e.target.checked 
-                                    ? [...currentSubcats, sub]
-                                    : currentSubcats.filter(s => s !== sub);
+                                    ? [...currentSubcats, subName]
+                                    : currentSubcats.filter(s => s !== subName);
                                   
                                   let newCats = [...currentCats];
                                   if (e.target.checked && !newCats.includes(cat)) {
                                     newCats.push(cat);
+                                  } else if (!e.target.checked) {
+                                    const hasOtherSubcatsChecked = subcatsList.some(s => {
+                                      const sName = s.name || s;
+                                      return sName !== subName && newSubcats.includes(sName);
+                                    });
+                                    if (!hasOtherSubcatsChecked) {
+                                      newCats = newCats.filter(c => c !== cat);
+                                    }
                                   }
 
                                   setFormData(prev => ({ 
@@ -1561,10 +1901,13 @@ const AddProduct = () => {
                                     category: newCats
                                   }));
                                 }}
+                                onClick={(e) => e.stopPropagation()}
                                 className="custom-checkbox"
+                                style={{ cursor: 'pointer' }}
                               />
-                              {sub}
-                            </label>
+                              {subName}
+                              <span style={{ color: '#94a3b8', fontSize: '12px', marginLeft: 'auto' }}>{subProductCount} {subProductCount === 1 ? 'Product' : 'Products'}</span>
+                            </div>
                           </div>
                         );
                       })}
@@ -1597,11 +1940,10 @@ const AddProduct = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
                 { name: 'Flash Sale', icon: 'las la-bolt' },
-                { name: 'Combo Offers', icon: 'las la-box' },
-                { name: 'Ourgoods Choice', icon: 'las la-star' },
-                { name: 'Cash Deals', icon: 'las la-money-bill-wave' },
-                { name: '9 Tk Deals', icon: 'las la-tags' },
-                { name: '0.99 Store', icon: 'las la-store' }
+                { name: 'Global Shop', icon: 'las la-globe' },
+                { name: 'Factory Direct', icon: 'las la-industry' },
+                { name: 'Combo & Choice', icon: 'las la-boxes' },
+                { name: 'Top Trends', icon: 'las la-fire' }
               ].map(placement => {
                 const currentPlacements = Array.isArray(formData.placements) ? formData.placements : (formData.placements ? formData.placements.split(', ') : []);
                 const isChecked = currentPlacements.includes(placement.name);
@@ -1797,6 +2139,15 @@ const AddProduct = () => {
 
         </div>
       </div>
+
+      {showMediaManager && (
+        <MediaManagerModal 
+          show={true}
+          onClose={() => setShowMediaManager(false)}
+          onSelect={handleMediaSelect}
+          initialSelected={images.map(img => typeof img === 'string' ? img : (img.id || img.url)).filter(Boolean)}
+        />
+      )}
     </div>
   );
 };
