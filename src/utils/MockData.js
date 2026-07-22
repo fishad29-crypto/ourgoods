@@ -59,7 +59,35 @@ export const getAllProducts = () => {
     try {
       const parsed = JSON.parse(cached);
       if (Array.isArray(parsed) && parsed.length > 0) {
+        // Strip out expired blob URLs from previous session
+        const DEFAULT_IMAGE = "https://via.placeholder.com/500x500.png?text=Default+Image";
+        parsed.forEach(p => {
+          if (typeof p.image === 'string' && p.image.startsWith('blob:')) {
+            p.image = DEFAULT_IMAGE; 
+          }
+          if (Array.isArray(p.images)) {
+            p.images = p.images.map(img => {
+              if (typeof img === 'string' && img.startsWith('blob:')) return null;
+              if (img && typeof img === 'object' && img.url && img.url.startsWith('blob:')) return null;
+              return img;
+            }).filter(Boolean);
+            
+            // Re-assign main image if it was cleared or invalid
+            if (p.images.length > 0) {
+                const firstImg = p.images[0];
+                p.image = typeof firstImg === 'string' ? firstImg : (firstImg.url || firstImg.src || DEFAULT_IMAGE);
+            } else {
+                p.image = DEFAULT_IMAGE;
+            }
+          } 
+          
+          if (!p.image || typeof p.image !== 'string') {
+             p.image = DEFAULT_IMAGE;
+          }
+        });
         globalProductsCache = parsed;
+        // Save cleaned cache back to storage
+        localStorage.setItem('userProductsCache', JSON.stringify(globalProductsCache));
         return globalProductsCache;
       }
     } catch (e) {
@@ -161,9 +189,6 @@ export const addProductToFrontend = (productData) => {
     sku: productData.sku || productData.id || 'gen_new_' + Date.now(),
     title: productData.name || 'New Product',
     category: productData.category || 'Women', // default category
-    image: productData.images && productData.images.length > 0 ? (typeof productData.images[0] === 'string' ? productData.images[0] : productData.images[0].url) : "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-    imageType: productData.images && productData.images.length > 0 ? (typeof productData.images[0] === 'object' ? productData.images[0].type : "image/jpeg") : "image/jpeg",
-    images: productData.images || [],
     originalPrice: parseFloat(productData.regularPrice) || 1000,
     price: parseFloat(productData.salePrice) || parseFloat(productData.regularPrice) || 800,
     discount: 0,
@@ -196,14 +221,30 @@ export const addProductToFrontend = (productData) => {
       : [],
     placements: productData.placements || [],
     ...productData, // Spreading productData to ensure ribbon, description, and other custom fields are saved
+    // Explicitly set these AFTER spreading productData so they can never be overwritten by stale keys
+    image: productData.images && productData.images.length > 0 ? (typeof productData.images[0] === 'string' ? productData.images[0] : (productData.images[0].url || "https://via.placeholder.com/500x500.png?text=Default+Image")) : "https://via.placeholder.com/500x500.png?text=Default+Image",
+    imageType: productData.images && productData.images.length > 0 ? (typeof productData.images[0] === 'object' ? productData.images[0].type : "image/jpeg") : "image/jpeg",
+    images: productData.images || [],
   };
 
   if (newProduct.originalPrice > newProduct.price) {
     newProduct.discount = Math.round(((newProduct.originalPrice - newProduct.price) / newProduct.originalPrice) * 100);
   }
 
+  // Extract colors and sizes for frontend compatibility
+  const colorAttr = newProduct.attributes.find(a => a.name.toLowerCase() === 'color');
+  const sizeAttr = newProduct.attributes.find(a => a.name.toLowerCase() === 'size');
+  if (colorAttr) newProduct.colors = colorAttr.options;
+  if (sizeAttr) newProduct.sizes = sizeAttr.options;
+
   // Check if product already exists (Edit Mode)
-  const existingIndex = globalProductsCache.findIndex(p => p.id === newProduct.id || (p.sku && p.sku === newProduct.sku));
+  let existingIndex = -1;
+  if (productData.originalId) {
+    // Exact match for the original product being edited, even if SKU changed
+    existingIndex = globalProductsCache.findIndex(p => p.id === productData.originalId || p.sku === productData.originalId);
+  } else {
+    existingIndex = globalProductsCache.findIndex(p => p.id === newProduct.id || (p.sku && p.sku === newProduct.sku));
+  }
   
   if (existingIndex !== -1) {
     // Update existing
@@ -212,9 +253,29 @@ export const addProductToFrontend = (productData) => {
     // Push to the very beginning of the cache so it shows up first everywhere
     globalProductsCache.unshift(newProduct);
   }
-  
   // Persist to local storage so they aren't lost on refresh
-  localStorage.setItem('userProductsCache', JSON.stringify(globalProductsCache));
+  try {
+    localStorage.setItem('userProductsCache', JSON.stringify(globalProductsCache));
+  } catch (e) {
+    if (e.name === 'QuotaExceededError' || e.message.includes('quota')) {
+      alert("WARNING: Local storage is full! The product was saved temporarily but may be lost if you refresh. Please upload smaller images or delete some old products to free up space.");
+    } else {
+      console.error("Failed to save to local storage", e);
+    }
+  }
+};
+
+export const updateProduct = (productId, updates) => {
+  if (!globalProductsCache) getAllProducts();
+  const index = globalProductsCache.findIndex(p => p.id === productId || p.sku === productId);
+  if (index !== -1) {
+    globalProductsCache[index] = { ...globalProductsCache[index], ...updates };
+    try {
+      localStorage.setItem('userProductsCache', JSON.stringify(globalProductsCache));
+    } catch (e) {
+      console.error("Failed to save to local storage", e);
+    }
+  }
 };
 
 export const deleteProduct = (productId) => {
@@ -233,7 +294,6 @@ import { useState, useEffect } from 'react';
 
 // CATEGORY DATA
 const defaultCategories = [
-  { id: -1, name: 'All Products', icon: 'las la-shopping-bag', image: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&q=80&w=150' },
   { id: 0, name: 'Ourgoods Stock', icon: 'las la-money-bill-wave', image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&q=90&w=150' },
   { id: 1, name: 'Apparels', icon: 'las la-female', image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&q=90&w=150' },
   { id: 3, name: 'Jewelry & Accessories', icon: 'las la-gem', image: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&q=90&w=150' },
@@ -244,7 +304,6 @@ const defaultCategories = [
 ];
 
 const defaultSubcategories = {
-  'All Products': [],
   'Ourgoods Stock': [
     { name: 'Trending Now', img: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&q=80&w=150' },
     { name: 'Flash Deals', img: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=150' },
@@ -318,32 +377,36 @@ const defaultSubcategories = {
     { name: 'Storage', img: 'https://images.unsplash.com/photo-1595515106969-1ce29566ff1c?auto=format&fit=crop&q=80&w=150' }
   ]
 };
-
 const getInitialCategories = () => {
   const stored = localStorage.getItem('mockCategories');
   if (stored) {
     const parsed = JSON.parse(stored);
-    // Add any missing default categories
     const missing = defaultCategories.filter(dc => !parsed.find(pc => pc.name === dc.name));
-    return [...parsed, ...missing];
+    return [...parsed, ...missing].filter(c => c.name !== 'All Products');
   }
-  return [...defaultCategories];
+  return [...defaultCategories].filter(c => c.name !== 'All Products');
 };
 
 const getInitialSubcategories = () => {
   const stored = localStorage.getItem('mockSubcategories');
   if (stored) {
     const parsed = JSON.parse(stored);
-    // Merge any missing default subcategories
     const merged = { ...parsed };
     for (const key in defaultSubcategories) {
       if (!merged[key]) {
         merged[key] = defaultSubcategories[key];
       }
     }
+    if (merged['All Products']) {
+      delete merged['All Products'];
+    }
     return merged;
   }
-  return {...defaultSubcategories};
+  const defaults = {...defaultSubcategories};
+  if (defaults['All Products']) {
+    delete defaults['All Products'];
+  }
+  return defaults;
 };
 
 let globalCategories = getInitialCategories();
@@ -428,3 +491,68 @@ export const useCategories = () => {
   return { categories, subcategories };
 };
 
+
+// VENDOR DATA
+const defaultVendors = [
+  { id: 'v1', name: 'Ourgoods Direct', contactName: 'System Admin', email: 'admin@ourgoods.com', phone: '+1234567890', status: 'Active', commission: 0, joinedAt: '2023-01-15', revenue: 45000, productsCount: 120 },
+  { id: 'v2', name: 'TechHaven Electronics', contactName: 'John Doe', email: 'john@techhaven.com', phone: '+1987654321', status: 'Active', commission: 15, joinedAt: '2023-03-22', revenue: 12500, productsCount: 45 },
+  { id: 'v3', name: 'StyleBoutique', contactName: 'Jane Smith', email: 'jane@styleboutique.com', phone: '+1555666777', status: 'Pending', commission: 18, joinedAt: '2023-11-05', revenue: 0, productsCount: 0 },
+  { id: 'v4', name: 'HomeEssentials', contactName: 'Robert Johnson', email: 'robert@homeessentials.com', phone: '+1444555666', status: 'Suspended', commission: 12, joinedAt: '2023-06-10', revenue: 8400, productsCount: 30 }
+];
+
+const getInitialVendors = () => {
+  const stored = localStorage.getItem('mockVendors');
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch(e) {}
+  }
+  return [...defaultVendors];
+};
+
+let globalVendors = getInitialVendors();
+
+const saveVendors = () => {
+  localStorage.setItem('mockVendors', JSON.stringify(globalVendors));
+  window.dispatchEvent(new Event('vendors-updated'));
+};
+
+export const getAllVendors = () => [...globalVendors];
+
+export const addVendor = (vendor) => {
+  const newId = 'v' + (Date.now() + Math.floor(Math.random() * 1000));
+  const newVendor = { ...vendor, id: newId, joinedAt: new Date().toISOString().split('T')[0], revenue: 0, productsCount: 0 };
+  globalVendors.push(newVendor);
+  saveVendors();
+  return newVendor;
+};
+
+export const updateVendor = (id, updates) => {
+  globalVendors = globalVendors.map(v => v.id === id ? { ...v, ...updates } : v);
+  saveVendors();
+};
+
+export const deleteVendor = (id) => {
+  globalVendors = globalVendors.filter(v => v.id !== id);
+  saveVendors();
+};
+
+export const useVendors = () => {
+  const [vendors, setVendors] = useState(getAllVendors());
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setVendors(getAllVendors());
+    };
+    window.addEventListener('vendors-updated', handleUpdate);
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'mockVendors') {
+        globalVendors = getInitialVendors();
+        handleUpdate();
+      }
+    });
+    return () => window.removeEventListener('vendors-updated', handleUpdate);
+  }, []);
+
+  return vendors;
+};

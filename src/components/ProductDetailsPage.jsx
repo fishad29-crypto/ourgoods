@@ -95,26 +95,79 @@ const GroupBuyRow = ({ user, nextUser, isAnimating, onJoin }) => {
 };
 
 const RotatingSkuBanner = ({ product }) => {
+  const [deliveryLibrary, setDeliveryLibrary] = useState([]);
+  const [paymentLibrary, setPaymentLibrary] = useState([]);
+
+  useEffect(() => {
+    try {
+      const dl = localStorage.getItem('deliveryLibrary');
+      if (dl) setDeliveryLibrary(JSON.parse(dl));
+      
+      const pl_loc = localStorage.getItem('paymentLibraryLocalV4');
+      const pl_glob = localStorage.getItem('paymentLibraryGlobalV4');
+      const pl_leg = localStorage.getItem('paymentLibraryV4') || localStorage.getItem('paymentLibrary');
+      
+      let combined = [];
+      if (pl_loc) combined = [...combined, ...JSON.parse(pl_loc)];
+      if (pl_glob) combined = [...combined, ...JSON.parse(pl_glob)];
+      if (pl_leg) {
+        const legacy = JSON.parse(pl_leg);
+        const combinedIds = new Set(combined.map(p => p.id));
+        const missingLegacy = legacy.filter(p => !combinedIds.has(p.id));
+        combined = [...combined, ...missingLegacy];
+      }
+      
+      if (combined.length > 0) setPaymentLibrary(combined);
+    } catch {}
+  }, []);
+
   const isGlobalProduct = product?.type === 'global' || product?.type === 'Global Product' || product?.marketType === 'global' || product?.product_type === 'Global Product' || product?.product_type === 'China Pre-Order';
   
-  const banners = isGlobalProduct ? [
-    {
-      bg: '#fef5e7', color: '#f39c12', icon: 'las la-truck', titleColor: '#666', title: 'Standard Delivery', subtitleColor: '#333', subtitle: '21 - 28 Days'
-    },
-    {
-      bg: '#e3f2fd', color: '#2196f3', icon: 'las la-shipping-fast', titleColor: '#666', title: 'Express Delivery', subtitleColor: '#333', subtitle: '4 - 7 Business Days'
-    },
-    {
-      bg: '#e8f5e9', color: '#4caf50', icon: 'las la-money-bill-wave', titleColor: '#333', title: 'Cash on Delivery Available', subtitleColor: '', subtitle: ''
-    }
-  ] : [
-    {
-      bg: '#FFF7ED', color: '#D97706', icon: 'las la-truck', titleColor: '#92400E', title: 'Estimated Delivery', subtitleColor: '#000', subtitle: '24-48h in Bangladesh'
-    },
-    {
-      bg: '#ECFDF5', color: '#059669', icon: 'las la-money-bill-wave', titleColor: '#000', title: 'Cash on Delivery Available', subtitleColor: '', subtitle: ''
-    }
-  ];
+  let bannerType = product?.deliveryBannerType;
+  if (!bannerType && product?.showDeliveryBanner !== false) {
+    bannerType = isGlobalProduct ? 'global' : '24-48h';
+  }
+
+  let deliveryText = '';
+  const customDeliveryMatch = deliveryLibrary.find(p => p.id === bannerType);
+  
+  if (customDeliveryMatch) deliveryText = customDeliveryMatch.label;
+  else if (bannerType === '24-48h') deliveryText = '24-48h in Bangladesh';
+  else if (bannerType === 'global') deliveryText = '21-28 day (Standard) & 4-7 days (Express)';
+  else if (bannerType === '1-5days') deliveryText = '1-5 days in Bangladesh & 1-2 days in Dhaka';
+  else if (bannerType?.startsWith('custom:')) deliveryText = bannerType.replace('custom:', '');
+
+  let paymentText = 'Cash on Delivery Available';
+  const paymentOpt = product?.paymentOption || 'cod';
+  const customPaymentMatch = paymentLibrary.find(p => p.id === paymentOpt);
+  
+  if (customPaymentMatch) {
+     paymentText = customPaymentMatch.label;
+  } else if (paymentOpt === 'full_advance') {
+     paymentText = 'Full Advance Payment Required';
+  } else if (paymentOpt === 'partial_advance') {
+     paymentText = '60% Advance, 40% Cash on Delivery';
+  } else if (paymentOpt.startsWith('custom_payment:') || paymentOpt.startsWith('custom_pay_local:') || paymentOpt.startsWith('custom_pay_global:')) {
+     let raw = paymentOpt.replace('custom_payment:', '').replace('custom_pay_local:', '').replace('custom_pay_global:', '');
+     paymentText = raw.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  }
+
+  const banners = [];
+  if (isGlobalProduct && (!bannerType || bannerType === 'global')) {
+    banners.push({ bg: '#fef5e7', color: '#f39c12', icon: 'las la-truck', titleColor: '#666', title: 'Standard Delivery', subtitleColor: '#333', subtitle: '21 - 28 Days' });
+    banners.push({ bg: '#e3f2fd', color: '#2196f3', icon: 'las la-shipping-fast', titleColor: '#666', title: 'Express Delivery', subtitleColor: '#333', subtitle: '4 - 7 Business Days' });
+  } else if (deliveryText && bannerType !== 'none') {
+    banners.push({ bg: '#FFF7ED', color: '#D97706', icon: 'las la-truck', titleColor: '#92400E', title: 'Estimated Delivery Time', subtitleColor: '#000', subtitle: deliveryText });
+  }
+
+  if (paymentText) {
+    banners.push({ bg: '#ECFDF5', color: '#059669', icon: 'las la-money-bill-wave', titleColor: '#000', title: paymentText, subtitleColor: '', subtitle: '' });
+  }
+  
+  // fallback if somehow empty
+  if (banners.length === 0) {
+    banners.push({ bg: '#FFF7ED', color: '#D97706', icon: 'las la-truck', titleColor: '#92400E', title: 'Estimated Delivery Time', subtitleColor: '#000', subtitle: '24-48h in Bangladesh' });
+  }
 
   const [active, setActive] = useState(0);
   useEffect(() => {
@@ -200,6 +253,8 @@ const ProductDetailsPage = () => {
   const { addToCart, cartCount } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const [product, setProduct] = useState(null);
+  const [deliveryLibrary, setDeliveryLibrary] = useState([]);
+  const [paymentLibrary, setPaymentLibrary] = useState([]);
   const [showToast, setShowToast] = useState(false);
   const [viewingCount, setViewingCount] = useState(0);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -210,24 +265,74 @@ const ProductDetailsPage = () => {
   const [isAnimatingGroupBuy, setIsAnimatingGroupBuy] = useState(false);
   const [voucherStatus, setVoucherStatus] = useState('available');
   const [showDiscountModal, setShowDiscountModal] = useState(false);
-  const [showSkuModal, setShowSkuModal] = useState(false);
+  const [showSkuModal, setShowSkuModal] = useState(() => {
+    return sessionStorage.getItem('productSkuModalOpen') === 'true';
+  });
+  
+  useEffect(() => {
+    sessionStorage.setItem('productSkuModalOpen', showSkuModal);
+  }, [showSkuModal]);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [lightboxTouchStartX, setLightboxTouchStartX] = useState(null);
   const [selectedAttributes, setSelectedAttributes] = useState({});
   const [skuQuantity, setSkuQuantity] = useState(1);
   const [customerLocationName, setCustomerLocationName] = useState('Dhaka');
-  const [customerAddress, setCustomerAddress] = useState(`Fish..., 159****5575, ${customerLocationName}, Bangladesh...`);
-  const [paymentMode, setPaymentMode] = useState('cod');
+  const [customerAddress, setCustomerAddress] = useState(`Fish..., 159****5575, Dhaka, Bangladesh...`);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('userAddresses');
+    if (saved) {
+      try {
+        const addresses = JSON.parse(saved);
+        const defaultAddr = addresses.find(a => a.isDefault) || addresses[0];
+        if (defaultAddr) {
+          setCustomerLocationName(defaultAddr.city);
+          const shortName = defaultAddr.recipient.slice(0, 4) + '...';
+          setCustomerAddress(`${shortName}, ${defaultAddr.phone}, ${defaultAddr.addressLine}, ${defaultAddr.city}`);
+        }
+      } catch (e) {
+        console.error('Error parsing addresses', e);
+      }
+    } else {
+      setCustomerAddress(`Fish..., 159****5575, ${customerLocationName}, Bangladesh...`);
+    }
+  }, []);
+  const paymentOptsRawForState = product?.paymentOption || 'cod';
+  const paymentOptsArrayForState = Array.isArray(paymentOptsRawForState) ? paymentOptsRawForState : [paymentOptsRawForState];
+  const [paymentMode, setPaymentMode] = useState(paymentOptsArrayForState[0]);
+  
+  useEffect(() => {
+    if (paymentOptsArrayForState.length > 0 && !paymentOptsArrayForState.includes(paymentMode)) {
+      setPaymentMode(paymentOptsArrayForState[0]);
+    }
+  }, [product?.paymentOption, paymentMode]);
+
   const [selectedPayment, setSelectedPayment] = useState('bKash');
   const [savedPayments, setSavedPayments] = useState({ bKash: '', Nagad: '', Bank: '' });
   const [newPaymentInput, setNewPaymentInput] = useState('');
+  const [showPaymentSetupModal, setShowPaymentSetupModal] = useState(false);
   const deliveryCharge = customerLocationName.toLowerCase() === 'dhaka' ? 60 : 130;
   const productAttributes = useMemo(() => {
     if (!product) return [];
+    
+    // First prefer the new attributes array format from AddProduct
+    if (product.attributes && Array.isArray(product.attributes) && product.attributes.length > 0) {
+      return product.attributes.map(attr => {
+        let opts = attr.options;
+        if (typeof opts === 'string') {
+           opts = opts.split(',').map(o => o.trim()).filter(Boolean);
+        }
+        return { name: attr.name, options: opts || [] };
+      }).filter(attr => attr.options.length > 0);
+    }
+    
+    // Fallback to old colors/sizes format
     let attrs = [];
     if (product.colors && product.colors.length > 0) {
-      attrs.push({ name: 'Color', options: product.colors });
+      attrs.push({ name: 'Color', options: typeof product.colors === 'string' ? product.colors.split(',').map(o=>o.trim()) : product.colors });
     }
     if (product.sizes && product.sizes.length > 0) {
-      attrs.push({ name: 'Size', options: product.sizes });
+      attrs.push({ name: 'Size', options: typeof product.sizes === 'string' ? product.sizes.split(',').map(o=>o.trim()) : product.sizes });
     }
     // Fallback if no variants
     if (attrs.length === 0) {
@@ -237,6 +342,29 @@ const ProductDetailsPage = () => {
   }, [product]);
 
   // Lock background scroll when any modal is open
+  useEffect(() => {
+    try {
+      const dl = localStorage.getItem('deliveryLibraryV4') || localStorage.getItem('deliveryLibrary');
+      if (dl) setDeliveryLibrary(JSON.parse(dl));
+      
+      const pl_loc = localStorage.getItem('paymentLibraryLocalV4');
+      const pl_glob = localStorage.getItem('paymentLibraryGlobalV4');
+      const pl_leg = localStorage.getItem('paymentLibraryV4') || localStorage.getItem('paymentLibrary');
+      
+      let combined = [];
+      if (pl_loc) combined = [...combined, ...JSON.parse(pl_loc)];
+      if (pl_glob) combined = [...combined, ...JSON.parse(pl_glob)];
+      if (pl_leg) {
+        const legacy = JSON.parse(pl_leg);
+        const combinedIds = new Set(combined.map(p => p.id));
+        const missingLegacy = legacy.filter(p => !combinedIds.has(p.id));
+        combined = [...combined, ...missingLegacy];
+      }
+      
+      if (combined.length > 0) setPaymentLibrary(combined);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     if (showSkuModal || showDiscountModal) {
       document.body.style.overflow = 'hidden';
@@ -448,16 +576,18 @@ const ProductDetailsPage = () => {
       <div className="pdp-main-content">
         {/* Left Column: Image Gallery */}
         <div className="pdp-image-container">
-          <div className="pdd-breadcrumb" style={{ alignItems: 'center', flexWrap: 'nowrap', overflow: 'hidden', gap: '8px', fontSize: '12px', marginBottom: '16px' }}>
-            <span style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: '#000', fontWeight: '700', flexShrink: 0 }} onClick={() => navigate(-1)}>
-              <i className="las la-arrow-left"></i> Back
+          <div className="pdd-breadcrumb" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', fontSize: '13px', marginBottom: '20px', padding: '0 4px' }}>
+            <span style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: '#111', fontWeight: '600' }} onClick={() => navigate(-1)}>
+              <i className="las la-arrow-left" style={{ fontSize: '16px' }}></i> Back
             </span>
-            <span style={{ color: '#e0e0e0', margin: '0 2px', fontSize: '13px', flexShrink: 0 }}>|</span>
-            <span style={{ cursor: 'pointer', color: '#000', flexShrink: 0 }} onClick={() => navigate('/')}>Home</span>
-            <span style={{ color: '#888', margin: '0 4px', flexShrink: 0 }}>/</span>
-            <span style={{ cursor: 'pointer', color: '#000', flexShrink: 0 }}>{product.category || 'Home & Decor'}</span>
-            <span style={{ color: '#888', margin: '0 4px', flexShrink: 0 }}>/</span>
-            <span title={product.title} style={{ color: 'var(--brand-pink)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.title}</span>
+            <span style={{ color: '#ccc' }}>|</span>
+            <span style={{ cursor: 'pointer', color: '#555' }} onClick={() => navigate('/')}>Home</span>
+            <span style={{ color: '#ccc' }}>/</span>
+            <span style={{ cursor: 'pointer', color: '#555' }}>
+              {Array.isArray(product.category) ? product.category.join(' / ') : (product.category || 'Home & Decor')}
+            </span>
+            <span style={{ color: '#ccc' }}>/</span>
+            <span title={product.title} style={{ color: 'var(--brand-pink)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '300px' }}>{product.title}</span>
           </div>
           {(() => {
             const productImages = product.images && product.images.length > 0 
@@ -465,14 +595,23 @@ const ProductDetailsPage = () => {
               : (product.image ? [{ url: product.image, type: product.imageType }] : []);
             
             const renderMedia = (imgObj, isMain = false) => {
-              const url = typeof imgObj === 'object' && imgObj !== null ? (imgObj.url || imgObj) : imgObj;
+              const url = typeof imgObj === 'object' && imgObj !== null ? (imgObj.url || imgObj.src || product.image) : imgObj;
+              const safeUrl = typeof url === 'string' ? url : "https://via.placeholder.com/500x500.png?text=Broken+Image";
+              
               const isVideo = (typeof imgObj === 'object' && imgObj !== null && imgObj.type && imgObj.type.startsWith('video/')) || 
-                              (typeof url === 'string' && (url.match(/\.(mp4|webm|ogg)$/i) || url.startsWith('data:video/')));
+                              (safeUrl.match(/\.(mp4|webm|ogg)$/i) || safeUrl.startsWith('data:video/'));
               
               if (isVideo) {
-                return <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} autoPlay={isMain} muted loop playsInline />;
+                return <video src={safeUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} autoPlay={isMain} muted loop playsInline />;
               }
-              return <img src={url} alt="Product view" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+              return (
+                <img 
+                  src={safeUrl} 
+                  alt="Product view" 
+                  onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/500x500.png?text=Image+Load+Error"; }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                />
+              );
             };
             
             const handleScroll = (e) => {
@@ -532,35 +671,39 @@ const ProductDetailsPage = () => {
                         <i className="las la-angle-right" style={{ fontSize: '12px', color: '#000' }}></i>
                       </div>
                     </div>
-                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', padding: '12px 0' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                       {productImages.length > 5 && (
                         <div 
-                          style={{ position: 'absolute', top: '-6px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
                           onClick={(e) => { e.stopPropagation(); document.getElementById('thumb-scroll').scrollBy({ top: -150, behavior: 'smooth' }); }}
                         >
-                          <i className="las la-angle-up" style={{ fontSize: '18px', color: '#555', background: '#fff', borderRadius: '50%', boxShadow: '0 2px 5px rgba(0,0,0,0.15)', padding: '2px', border: '1px solid #eee' }}></i>
+                          <i className="las la-angle-up" style={{ fontSize: '18px', color: '#555', background: '#fff', borderRadius: '50%', boxShadow: '0 2px 5px rgba(0,0,0,0.15)', padding: '4px', border: '1px solid #eee' }}></i>
                         </div>
                       )}
                       
-                      <div id="thumb-scroll" className="pdp-desktop-thumbnails" style={{ position: 'relative', scrollBehavior: 'smooth' }}>
+                      <div id="thumb-scroll" style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '500px', overflowY: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                         {productImages.map((img, idx) => (
                           <div 
                             key={idx} 
-                            className={`pdp-thumbnail ${activeImageIndex === idx ? 'active' : ''}`}
-                            onMouseEnter={() => setActiveImageIndex(idx)}
+                            style={{ 
+                              width: '70px', height: '70px', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer',
+                              border: activeImageIndex === idx ? '2px solid var(--brand-pink)' : '2px solid transparent',
+                              opacity: activeImageIndex === idx ? 1 : 0.6,
+                              transition: 'all 0.2s', flexShrink: 0
+                            }}
                             onClick={() => setActiveImageIndex(idx)}
                           >
-                            {renderMedia(img, false)}
+                            {renderMedia(img)}
                           </div>
                         ))}
                       </div>
 
                       {productImages.length > 5 && (
                         <div 
-                          style={{ position: 'absolute', bottom: '-6px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+                          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
                           onClick={(e) => { e.stopPropagation(); document.getElementById('thumb-scroll').scrollBy({ top: 150, behavior: 'smooth' }); }}
                         >
-                          <i className="las la-angle-down" style={{ fontSize: '18px', color: '#555', background: '#fff', borderRadius: '50%', boxShadow: '0 2px 5px rgba(0,0,0,0.15)', padding: '2px', border: '1px solid #eee' }}></i>
+                          <i className="las la-angle-down" style={{ fontSize: '18px', color: '#555', background: '#fff', borderRadius: '50%', boxShadow: '0 2px 5px rgba(0,0,0,0.15)', padding: '4px', border: '1px solid #eee' }}></i>
                         </div>
                       )}
                     </div>
@@ -672,126 +815,117 @@ const ProductDetailsPage = () => {
                 bannerType = isGlobalProduct ? 'global' : '24-48h';
               }
               
+              let deliveryText = '';
+              const customDeliveryMatch = deliveryLibrary.find(p => p.id === bannerType);
+              
+              if (customDeliveryMatch) deliveryText = customDeliveryMatch.label;
+              else if (bannerType === '24-48h') deliveryText = '24-48h in Bangladesh';
+              else if (bannerType === 'global') deliveryText = '21-28 day (Standard) & 4-7 days (Express)';
+              else if (bannerType === '1-5days') deliveryText = '1-5 days in Bangladesh & 1-2 days in Dhaka';
+              else if (bannerType?.startsWith('custom:')) deliveryText = bannerType.replace('custom:', '');
+
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                  {bannerType === 'global' && (
-                    <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#fef5e7', borderRadius: '8px' }}>
-                        <i className="las la-truck" style={{ fontSize: '20px', color: '#f39c12' }}></i>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '12px', color: '#666', lineHeight: '1.2' }}>Standard Delivery</span>
-                            {product?.vendorLocation && (
-                              <span style={{ fontSize: '11px', background: '#fff', border: '1px solid #f39c12', color: '#f39c12', padding: '1px 6px', borderRadius: '4px' }}>from {product.vendorLocation}</span>
-                            )}
-                          </div>
-                          <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2', marginTop: '2px' }}>21 - 28 Days</span>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#e3f2fd', borderRadius: '8px' }}>
-                        <i className="las la-shipping-fast" style={{ fontSize: '20px', color: '#2196f3' }}></i>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '12px', color: '#666', lineHeight: '1.2' }}>Express Delivery</span>
-                            {product?.vendorLocation && (
-                              <span style={{ fontSize: '11px', background: '#fff', border: '1px solid #2196f3', color: '#2196f3', padding: '1px 6px', borderRadius: '4px' }}>from {product.vendorLocation}</span>
-                            )}
-                          </div>
-                          <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2', marginTop: '2px' }}>4 - 7 Business Days</span>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                  
-                  {bannerType === '24-48h' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', padding: '10px 12px', background: '#fef5e7', borderRadius: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <i className="las la-truck" style={{ fontSize: '20px', color: '#f39c12' }}></i>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-                            <span style={{ fontSize: '12px', color: '#666', lineHeight: '1.2' }}>Estimated Delivery</span>
-                            {product?.vendorLocation && (
-                              <span style={{ fontSize: '11px', background: '#fff', border: '1px solid #f39c12', color: '#f39c12', padding: '1px 6px', borderRadius: '4px' }}>from {product.vendorLocation}</span>
-                            )}
-                          </div>
-                          <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2' }}>24-48h in Bangladesh</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                      {((bannerType && bannerType !== 'none') || product?.showSameDayDelivery) && (
+                        <div style={{ display: 'flex', flexDirection: 'column', background: '#fef5e7', borderRadius: '8px', overflow: 'hidden' }}>
+                          {bannerType && bannerType !== 'none' && (
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px' }}>
+                              <i className="las la-truck" style={{ fontSize: '22px', color: '#f39c12', marginTop: '2px' }}></i>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <span style={{ fontSize: '12px', color: '#666', lineHeight: '1.2' }}>Estimated Delivery Time</span>
+                                <span style={{ fontSize: '14px', color: '#333', fontWeight: 'bold', lineHeight: '1.3' }}>{deliveryText}</span>
+                                {product?.vendorLocation && (
+                                  <span style={{ fontSize: '12px', color: '#666', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <i className="las la-map-marker" style={{ fontSize: '14px', color: '#999' }}></i>
+                                    Ships from {product.vendorLocation}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
 
-                  {bannerType === '1-5days' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', padding: '10px 12px', background: '#fef5e7', borderRadius: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <i className="las la-truck" style={{ fontSize: '20px', color: '#f39c12' }}></i>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-                            <span style={{ fontSize: '12px', color: '#666', lineHeight: '1.2' }}>Estimated Delivery</span>
-                            {product?.vendorLocation && (
-                              <span style={{ fontSize: '11px', background: '#fff', border: '1px solid #f39c12', color: '#f39c12', padding: '1px 6px', borderRadius: '4px' }}>from {product.vendorLocation}</span>
-                            )}
-                          </div>
-                          <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2' }}>1-5 Days in Bangladesh & 1-2 Days in Dhaka</span>
+                          {product?.showSameDayDelivery && (
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', padding: '8px 12px', background: '#fffbeb', borderTop: '1px dashed rgba(243, 156, 18, 0.4)' }}>
+                              <i className="las la-bolt" style={{ fontSize: '16px', color: '#f59e0b', marginTop: '1px' }}></i>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'baseline' }}>
+                                <span style={{ fontSize: '12px', color: '#d97706', fontWeight: 'bold' }}>Same Day Delivery in Dhaka:</span>
+                                <span style={{ fontSize: '12px', color: '#d97706', fontWeight: 'bold' }}>{localStorage.getItem('sameDayDeliveryLabel') || 'Available for Same Day Delivery (before 12pm)'}</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    </div>
-                  )}
+                      )}
+                  
+                  {(() => {
+                    const paymentOptsRaw = product?.paymentOption || 'cod';
+                    const paymentOptsArray = Array.isArray(paymentOptsRaw) ? paymentOptsRaw : [paymentOptsRaw];
+                    
+                    if (paymentOptsArray.length === 0) return null;
+                    
+                    return (
+                      <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
+                        {paymentOptsArray.map((opt, idx) => {
+                          let paymentText = '';
+                          let paymentBg = '#e8f5e9';
+                          let paymentIconColor = '#4caf50';
+                          let paymentIcon = 'las la-money-bill-wave';
+                          
+                          const customPaymentMatch = paymentLibrary.find(p => p.id === opt);
+                          
+                          const palettes = [
+                            { bg: '#e8f5e9', color: '#4caf50', icon: 'las la-money-bill-wave' },
+                            { bg: '#e3f2fd', color: '#2196f3', icon: 'las la-credit-card' },
+                            { bg: '#fff3e0', color: '#ff9800', icon: 'las la-wallet' },
+                            { bg: '#f3e5f5', color: '#9c27b0', icon: 'las la-gift' },
+                            { bg: '#e0f2f1', color: '#009688', icon: 'las la-money-check' },
+                            { bg: '#ffebee', color: '#f44336', icon: 'las la-receipt' },
+                            { bg: '#fff8e1', color: '#ffc107', icon: 'las la-coins' },
+                            { bg: '#ede7f6', color: '#673ab7', icon: 'las la-tags' }
+                          ];
+                          let hash = 0;
+                          for (let i = 0; i < opt.length; i++) hash = opt.charCodeAt(i) + ((hash << 5) - hash);
+                          const fallbackPalette = palettes[Math.abs(hash) % palettes.length];
 
-                  {bannerType?.startsWith('custom:') && (
-                    <div style={{ display: 'flex', flexDirection: 'column', padding: '10px 12px', background: '#fef5e7', borderRadius: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <i className="las la-truck" style={{ fontSize: '20px', color: '#f39c12' }}></i>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-                            <span style={{ fontSize: '12px', color: '#666', lineHeight: '1.2' }}>Estimated Delivery</span>
-                            {product?.vendorLocation && (
-                              <span style={{ fontSize: '11px', background: '#fff', border: '1px solid #f39c12', color: '#f39c12', padding: '1px 6px', borderRadius: '4px' }}>from {product.vendorLocation}</span>
-                            )}
-                          </div>
-                          <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2' }}>{bannerType.replace('custom:', '')}</span>
-                        </div>
+                          if (customPaymentMatch) {
+                             paymentText = customPaymentMatch.label;
+                             const labelLower = paymentText.toLowerCase();
+                             if (opt === 'cod' || labelLower.includes('cash on delivery')) {
+                               paymentBg = '#e8f5e9'; paymentIconColor = '#4caf50'; paymentIcon = 'las la-money-bill-wave';
+                             } else if (opt === 'pay_now' || opt === 'full_advance' || labelLower.includes('pay now') || labelLower.includes('full advance')) {
+                               paymentBg = '#e3f2fd'; paymentIconColor = '#2196f3'; paymentIcon = 'las la-credit-card';
+                             } else if (opt === 'partial_advance' || labelLower.includes('partial advance')) {
+                               paymentBg = '#fff3e0'; paymentIconColor = '#ff9800'; paymentIcon = 'las la-wallet';
+                             } else {
+                               paymentBg = fallbackPalette.bg; paymentIconColor = fallbackPalette.color; paymentIcon = fallbackPalette.icon;
+                             }
+                          } else if (opt === 'pay_now' || opt === 'full_advance') {
+                             paymentText = 'Pay Now';
+                             paymentBg = '#e3f2fd'; paymentIconColor = '#2196f3'; paymentIcon = 'las la-credit-card';
+                          } else if (opt === 'partial_advance') {
+                             paymentText = 'Partial Advance (60% Advance, 40% COD)';
+                             paymentBg = '#fff3e0'; paymentIconColor = '#ff9800'; paymentIcon = 'las la-wallet';
+                          } else if (opt.startsWith && (opt.startsWith('custom_payment:') || opt.startsWith('custom_pay_local:') || opt.startsWith('custom_pay_global:'))) {
+                             let raw = opt.replace('custom_payment:', '').replace('custom_pay_local:', '').replace('custom_pay_global:', '');
+                             paymentText = raw.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                             paymentBg = fallbackPalette.bg; paymentIconColor = fallbackPalette.color; paymentIcon = fallbackPalette.icon;
+                          } else {
+                             paymentText = 'Cash on Delivery Available';
+                          }
+                          
+                          if (!paymentText) return null;
+                          
+                          return (
+                            <div key={idx} style={{ flex: '1', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px', background: paymentBg, borderRadius: '8px', overflow: 'hidden' }}>
+                              <i className={paymentIcon} style={{ fontSize: '18px', color: paymentIconColor, flexShrink: 0 }}></i>
+                              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                                <span style={{ fontSize: '11px', color: '#333', fontWeight: 'bold', lineHeight: '1.2', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{paymentText}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    </div>
-                  )}
-                  
-                  {product?.showSameDayDelivery && (
-                    <div style={{ display: 'flex', flexDirection: 'column', padding: '10px 12px', background: '#fef5e7', borderRadius: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <i className="las la-shipping-fast" style={{ fontSize: '20px', color: '#f39c12' }}></i>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-                            <span style={{ fontSize: '12px', color: '#666', lineHeight: '1.2' }}>Same Day Delivery</span>
-                          </div>
-                          <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2' }}>(before 12pm order)</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {(!product?.paymentOption || product?.paymentOption === 'cod') && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#e8f5e9', borderRadius: '8px' }}>
-                      <i className="las la-money-bill-wave" style={{ fontSize: '20px', color: '#4caf50' }}></i>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2' }}>Cash on Delivery Available</span>
-                      </div>
-                    </div>
-                  )}
-                  {product?.paymentOption === 'full_advance' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#e3f2fd', borderRadius: '8px' }}>
-                      <i className="las la-credit-card" style={{ fontSize: '20px', color: '#2196f3' }}></i>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2' }}>Full Advance Payment Required</span>
-                      </div>
-                    </div>
-                  )}
-                  {product?.paymentOption === 'partial_advance' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#fff3e0', borderRadius: '8px' }}>
-                      <i className="las la-wallet" style={{ fontSize: '20px', color: '#ff9800' }}></i>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '13px', color: '#333', fontWeight: 'bold', lineHeight: '1.2' }}>60% Advance, 40% Cash on Delivery</span>
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               );
             })()}
@@ -914,6 +1048,24 @@ const ProductDetailsPage = () => {
               Visit Store <i className="las la-angle-right"></i>
             </button>
           </div>
+          
+          {/* Description */}
+          {product.description && (
+            <div style={{ marginTop: '16px', marginBottom: '8px', padding: '16px', background: '#fff', borderRadius: '12px', border: '1px solid #eee' }}>
+              <div style={{ textAlign: 'center', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid #f3f4f6' }}>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#1f2937', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <i className="las la-file-alt" style={{ color: '#E91E63', fontSize: '22px' }}></i>
+                  Product Details
+                </h3>
+                <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#6b7280' }}>Specifications, features, and everything you need to know</p>
+              </div>
+              <div 
+                className="product-description-content"
+                style={{ fontSize: '14px', color: '#334155', lineHeight: '1.6' }}
+                dangerouslySetInnerHTML={{ __html: product.description }}
+              />
+            </div>
+          )}
 
 
           {/* End of Info Card */}
@@ -955,12 +1107,7 @@ const ProductDetailsPage = () => {
           <span style={{ width: '30px', height: '1px', background: '#eee' }}></span>
         </div>
         
-        {/* Description */}
-        {product.description && (
-          <div style={{ fontSize: '14px', color: '#333', lineHeight: '1.6', marginBottom: '24px', whiteSpace: 'pre-line' }}>
-            {product.description}
-          </div>
-        )}
+
 
         {/* Additional Info Sections */}
         {product.infoSections && product.infoSections.length > 0 && (
@@ -1082,13 +1229,20 @@ const ProductDetailsPage = () => {
       {showSkuModal && (
         <div className="sku-modal-overlay" onClick={() => setShowSkuModal(false)}>
           <div className="sku-modal-content" onClick={e => e.stopPropagation()}>
+            <i className="las la-arrow-left" 
+               style={{ position: 'absolute', top: '16px', left: '16px', fontSize: '24px', cursor: 'pointer', color: '#111', zIndex: 1 }}
+               onClick={() => setShowSkuModal(false)}
+            ></i>
             <i className="las la-times" 
                style={{ position: 'absolute', top: '16px', right: '16px', fontSize: '24px', cursor: 'pointer', color: '#999', zIndex: 1 }}
                onClick={() => setShowSkuModal(false)}
             ></i>
             
             {/* Address Row */}
-            <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', background: '#F8F8F8', padding: '12px', borderRadius: '8px', marginBottom: '16px', marginRight: '32px' }}>
+            <div 
+              onClick={() => navigate('/addresses')}
+              style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', background: '#F8F8F8', padding: '12px', borderRadius: '8px', marginBottom: '16px', marginLeft: '32px', marginRight: '32px' }}
+            >
               <i className="las la-map-marker" style={{ fontSize: '20px', color: '#999', marginRight: '6px' }}></i>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ fontSize: '14px', color: '#333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: '12px', fontWeight: '500' }}>
@@ -1104,97 +1258,89 @@ const ProductDetailsPage = () => {
             {/* Payment Selection */}
             <div style={{ marginBottom: '24px', marginRight: '32px' }}>
               <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-                <button
-                  onClick={() => setPaymentMode('cod')}
-                  style={{ flex: 1, padding: '10px', border: `2px solid ${paymentMode === 'cod' ? '#E91E63' : '#eee'}`, background: paymentMode === 'cod' ? '#FFF0F5' : '#fff', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                >
-                  <i className="las la-money-bill-wave" style={{ fontSize: '20px', color: paymentMode === 'cod' ? '#E91E63' : '#666' }}></i>
-                  <span style={{ fontSize: '14px', fontWeight: paymentMode === 'cod' ? 'bold' : 'normal', color: paymentMode === 'cod' ? '#E91E63' : '#333' }}>Cash on Delivery</span>
-                </button>
-                <button
-                  onClick={() => setPaymentMode('pay_now')}
-                  style={{ flex: 1, padding: '10px', border: `2px solid ${paymentMode === 'pay_now' ? '#E91E63' : '#eee'}`, background: paymentMode === 'pay_now' ? '#FFF0F5' : '#fff', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                >
-                  <i className="las la-credit-card" style={{ fontSize: '20px', color: paymentMode === 'pay_now' ? '#E91E63' : '#666' }}></i>
-                  <span style={{ fontSize: '14px', fontWeight: paymentMode === 'pay_now' ? 'bold' : 'normal', color: paymentMode === 'pay_now' ? '#E91E63' : '#333' }}>Pay Now</span>
-                </button>
+                {paymentOptsArrayForState.map((opt, idx) => {
+                  let paymentText = '';
+                  let paymentIcon = '';
+                  
+                  const customPaymentMatch = paymentLibrary.find(p => p.id === opt);
+                  
+                  const palettes = [
+                    { bg: '#e8f5e9', color: '#4caf50', icon: 'las la-money-bill-wave' },
+                    { bg: '#e3f2fd', color: '#2196f3', icon: 'las la-credit-card' },
+                    { bg: '#fff3e0', color: '#ff9800', icon: 'las la-wallet' },
+                    { bg: '#f3e5f5', color: '#9c27b0', icon: 'las la-gift' },
+                    { bg: '#e0f2f1', color: '#009688', icon: 'las la-money-check' },
+                    { bg: '#ffebee', color: '#f44336', icon: 'las la-receipt' },
+                    { bg: '#fff8e1', color: '#ffc107', icon: 'las la-coins' },
+                    { bg: '#ede7f6', color: '#673ab7', icon: 'las la-tags' }
+                  ];
+                  const fallbackPalette = palettes[idx % palettes.length];
+                  
+                  if (customPaymentMatch) {
+                     paymentText = customPaymentMatch.label;
+                     const labelLower = paymentText.toLowerCase();
+                     if (opt === 'cod' || labelLower.includes('cash on delivery')) {
+                       paymentIcon = 'las la-money-bill-wave';
+                     } else if (opt === 'pay_now' || opt === 'full_advance' || labelLower.includes('pay now') || labelLower.includes('full advance')) {
+                       paymentIcon = 'las la-credit-card';
+                     } else if (opt === 'partial_advance' || labelLower.includes('partial advance')) {
+                       paymentIcon = 'las la-wallet';
+                     } else {
+                       paymentIcon = fallbackPalette.icon;
+                     }
+                  } else if (opt === 'pay_now' || opt === 'full_advance') {
+                     paymentText = 'Pay Now';
+                     paymentIcon = 'las la-credit-card';
+                  } else if (opt === 'partial_advance') {
+                     paymentText = 'Partial Advance';
+                     paymentIcon = 'las la-wallet';
+                  } else if (opt.startsWith && (opt.startsWith('custom_payment:') || opt.startsWith('custom_pay_local:') || opt.startsWith('custom_pay_global:'))) {
+                     let raw = opt.replace('custom_payment:', '').replace('custom_pay_local:', '').replace('custom_pay_global:', '');
+                     paymentText = raw.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                     paymentIcon = fallbackPalette.icon;
+                  } else {
+                     paymentText = 'Cash on Delivery';
+                     paymentIcon = 'las la-money-bill-wave';
+                  }
+                  
+                  const isSelected = paymentMode === opt;
+                  
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => { setPaymentMode(opt); if (opt !== 'cod') setShowPaymentSetupModal(true); }}
+                      style={{ flex: 1, padding: '10px', border: `2px solid ${isSelected ? '#E91E63' : '#eee'}`, background: isSelected ? '#FFF0F5' : '#fff', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                    >
+                      <i className={paymentIcon} style={{ fontSize: '20px', color: isSelected ? '#E91E63' : '#666' }}></i>
+                      <span style={{ fontSize: '14px', fontWeight: isSelected ? 'bold' : 'normal', color: isSelected ? '#E91E63' : '#333' }}>{paymentText}</span>
+                    </button>
+                  );
+                })}
               </div>
 
-              {paymentMode === 'pay_now' && (
-                <>
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                    {[
-                      { name: 'bKash', iconUrl: 'https://sandbox.sslcommerz.com/gwprocess/v4/image/gw/bkash.png' }, 
-                      { name: 'Nagad', iconUrl: 'https://sandbox.sslcommerz.com/gwprocess/v4/image/gw/nagad.png' }, 
-                      { name: 'Bank', icon: 'las la-university' }
-                    ].map(method => (
-                      <button 
-                        key={method.name}
-                        onClick={() => { setSelectedPayment(method.name); setNewPaymentInput(''); }}
-                        style={{ flex: 1, padding: '8px', border: `1px solid ${selectedPayment === method.name ? '#E91E63' : '#ddd'}`, background: selectedPayment === method.name ? '#FFF0F5' : '#fff', color: selectedPayment === method.name ? '#E91E63' : '#666', borderRadius: '6px', fontSize: '13px', fontWeight: selectedPayment === method.name ? 'bold' : 'normal', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                      >
-                        {method.iconUrl ? (
-                          <img src={method.iconUrl} alt={method.name} style={{ height: '16px', objectFit: 'contain' }} />
-                        ) : (
-                          <>
-                            <i className={method.icon} style={{ fontSize: '16px' }}></i>
-                            {method.name}
-                          </>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  
-                  <div style={{ background: '#F8F8F8', padding: '12px', borderRadius: '8px' }}>
-                    {savedPayments[selectedPayment] ? (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ fontSize: '13px', color: '#333' }}>
-                          <span style={{ color: '#888', marginRight: '4px' }}>Saved {selectedPayment}:</span> 
-                          <span style={{ fontWeight: 'bold' }}>{savedPayments[selectedPayment]}</span>
-                        </div>
-                        <button 
-                          onClick={() => setSavedPayments(prev => ({ ...prev, [selectedPayment]: '' }))}
-                          style={{ background: 'none', border: 'none', color: '#E91E63', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' }}
-                        >
-                          Change
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <input 
-                          type="text" 
-                          placeholder={`Enter ${selectedPayment} ${selectedPayment === 'Bank' ? 'account' : 'number'} to save`}
-                          value={newPaymentInput}
-                          onChange={e => setNewPaymentInput(e.target.value)}
-                          style={{ flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', outline: 'none' }}
-                        />
-                        <button 
-                          onClick={() => {
-                            if(newPaymentInput.trim()) {
-                              setSavedPayments(prev => ({ ...prev, [selectedPayment]: newPaymentInput.trim() }));
-                              setNewPaymentInput('');
-                            }
-                          }}
-                          style={{ padding: '0 16px', background: '#333', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
-                        >
-                          Save
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-              {paymentMode === 'cod' && (
-                <div style={{ background: '#FFF0F5', padding: '12px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', border: '1px dashed #E91E63' }}>
-                  <i className="las la-hand-holding-usd" style={{ color: '#E91E63', fontSize: '20px' }}></i>
-                  <div style={{ fontSize: '13px', color: '#E91E63', fontWeight: '500' }}>Pay directly in cash when your order arrives.</div>
-                </div>
-              )}
+
+
             </div>
 
             {/* Header: Image & Price */}
             <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
-              <img src={product.image} alt={product.name} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #eee' }} />
+              <div 
+                style={{ position: 'relative', width: '100px', height: '100px', cursor: 'pointer', borderRadius: '8px', overflow: 'hidden' }}
+                onClick={() => setIsLightboxOpen(true)}
+              >
+                <img 
+                  src={(() => {
+                    const productImages = product.images && product.images.length > 0 ? product.images : [product.image];
+                    const currentImg = productImages[activeImageIndex] || product.image;
+                    return typeof currentImg === 'object' && currentImg !== null ? (currentImg.url || currentImg.src || product.image) : currentImg;
+                  })()}
+                  alt={product.name} 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid #eee' }} 
+                />
+                <div style={{ position: 'absolute', bottom: '6px', right: '6px', background: 'rgba(0,0,0,0.6)', color: '#fff', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                  <i className="las la-search-plus" style={{ fontSize: '14px' }}></i>
+                </div>
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <div style={{ color: '#E91E63', fontSize: '24px', fontWeight: 'bold' }}>৳{product.price.toLocaleString()}</div>
                 <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>Please select options</div>
@@ -1213,10 +1359,30 @@ const ProductDetailsPage = () => {
                         key={option}
                         onClick={() => {
                           setSelectedAttributes(prev => ({ ...prev, [attr.name]: option }));
-                          if (attr.name === 'Color' && product.colorImages && product.colorImages[option]) {
-                            const imageUrl = product.colorImages[option];
+                          if (attr.name === 'Color') {
                             const productImages = product.images && product.images.length > 0 ? product.images : [product.image];
-                            const imageIndex = productImages.indexOf(imageUrl);
+                            let imageIndex = -1;
+                            
+                            if (product.colorImages) {
+                              const colorKey = Object.keys(product.colorImages).find(k => k.toLowerCase() === option.toLowerCase());
+                              if (colorKey && product.colorImages[colorKey]) {
+                                const imgData = product.colorImages[colorKey];
+                                const imgUrl = typeof imgData === 'object' && imgData !== null ? (imgData.url || imgData.src) : imgData;
+                                imageIndex = productImages.findIndex(img => {
+                                  const url = typeof img === 'object' && img !== null ? (img.url || img.src) : img;
+                                  return url === imgUrl;
+                                });
+                              }
+                            }
+                            
+                            if (imageIndex === -1) {
+                              // Fallback for mock products: select image by color option index
+                              const optionIndex = attr.options.indexOf(option);
+                              if (optionIndex !== -1 && optionIndex < productImages.length) {
+                                imageIndex = optionIndex;
+                              }
+                            }
+                            
                             if (imageIndex !== -1) {
                               setActiveImageIndex(imageIndex);
                             }
@@ -1226,10 +1392,18 @@ const ProductDetailsPage = () => {
                           padding: '8px 16px', background: selectedAttributes[attr.name] === option ? '#FFEDEE' : '#f5f5f5',
                           color: selectedAttributes[attr.name] === option ? '#E91E63' : '#333',
                           border: `1px solid ${selectedAttributes[attr.name] === option ? '#E91E63' : 'transparent'}`,
-                          borderRadius: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: selectedAttributes[attr.name] === option ? 'bold' : 'normal'
+                          borderRadius: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: selectedAttributes[attr.name] === option ? 'bold' : 'normal',
+                          display: 'flex', alignItems: 'center', gap: '6px'
                         }}
                       >
-                        {option}
+                        {attr.name === 'Color' && (
+                          <span style={{
+                            width: '12px', height: '12px', borderRadius: '50%',
+                            backgroundColor: option.includes('|') ? option.split('|')[0].toLowerCase().trim() : option.toLowerCase().trim(),
+                            border: '1px solid #ddd', display: 'inline-block', flexShrink: 0
+                          }}></span>
+                        )}
+                        {option.includes('|') ? option.split('|')[0] : option}
                       </div>
                     ))}
                   </div>
@@ -1237,7 +1411,7 @@ const ProductDetailsPage = () => {
               ))}
 
               {/* Quantity */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '24px', gap: '12px' }}>
                 <span style={{ fontSize: '14px', color: '#333', fontWeight: 'bold' }}>Quantity</span>
                 <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' }}>
                   <button onClick={() => setSkuQuantity(q => Math.max(1, q - 1))} style={{ width: '32px', height: '32px', background: '#f9f9f9', border: 'none', borderRight: '1px solid #ddd', fontSize: '16px', color: skuQuantity <= 1 ? '#ccc' : '#333', cursor: 'pointer' }}>-</button>
@@ -1264,8 +1438,8 @@ const ProductDetailsPage = () => {
                     alert('Please select all options before proceeding');
                     return;
                   }
-                  if(paymentMode === 'pay_now' && !savedPayments[selectedPayment]) {
-                    alert(`Please save your ${selectedPayment} payment details before confirming.`);
+                  if(paymentMode !== 'cod' && !savedPayments[selectedPayment]) {
+                    setShowPaymentSetupModal(true);
                     return;
                   }
                   addToCart({ 
@@ -1281,6 +1455,137 @@ const ProductDetailsPage = () => {
                 Confirm
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox Overlay */}
+      {isLightboxOpen && (
+        <div 
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.95)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setIsLightboxOpen(false)}
+          onTouchStart={(e) => setLightboxTouchStartX(e.touches[0].clientX)}
+          onTouchEnd={(e) => {
+            if (lightboxTouchStartX === null) return;
+            const diff = lightboxTouchStartX - e.changedTouches[0].clientX;
+            const productImages = product.images && product.images.length > 0 ? product.images : [product.image];
+            if (diff > 50) {
+              setActiveImageIndex(prev => prev < productImages.length - 1 ? prev + 1 : 0);
+            } else if (diff < -50) {
+              setActiveImageIndex(prev => prev > 0 ? prev - 1 : productImages.length - 1);
+            }
+            setLightboxTouchStartX(null);
+          }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()} 
+            style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+          >
+            <button 
+              onClick={() => setIsLightboxOpen(false)} 
+              style={{ position: 'absolute', top: '20px', right: '20px', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <i className="las la-times" style={{ fontSize: '24px' }}></i>
+            </button>
+            
+            {(() => {
+              const productImages = product.images && product.images.length > 0 ? product.images : [product.image];
+              const currentImg = productImages[activeImageIndex];
+              const safeUrl = typeof currentImg === 'object' && currentImg !== null ? (currentImg.url || currentImg.src || product.image) : currentImg;
+              const isVideo = (typeof currentImg === 'object' && currentImg !== null && currentImg.type && currentImg.type.startsWith('video/')) || 
+                              (typeof safeUrl === 'string' && (safeUrl.match(/\.(mp4|webm|ogg)$/i) || safeUrl.startsWith('data:video/')));
+              
+              return (
+                <>
+                  {productImages.length > 1 && (
+                    <>
+                      <button onClick={() => setActiveImageIndex(prev => prev > 0 ? prev - 1 : productImages.length - 1)} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <i className="las la-angle-left" style={{ fontSize: '24px' }}></i>
+                      </button>
+                      <button onClick={() => setActiveImageIndex(prev => prev < productImages.length - 1 ? prev + 1 : 0)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <i className="las la-angle-right" style={{ fontSize: '24px' }}></i>
+                      </button>
+                    </>
+                  )}
+
+                  {isVideo ? (
+                    <video src={safeUrl} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} controls autoPlay loop playsInline />
+                  ) : (
+                    <img src={safeUrl} alt="Product Full" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', userSelect: 'none' }} />
+                  )}
+                  
+                  {productImages.length > 1 && (
+                    <div style={{ position: 'absolute', bottom: '20px', color: '#fff', fontSize: '14px', background: 'rgba(0,0,0,0.5)', padding: '6px 16px', borderRadius: '20px', fontWeight: '500', letterSpacing: '1px' }}>
+                      {activeImageIndex + 1} / {productImages.length}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+      {/* Payment Setup Modal */}
+      {showPaymentSetupModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.6)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowPaymentSetupModal(false)}>
+          <div style={{ background: '#fff', borderRadius: '16px', width: '90%', maxWidth: '400px', padding: '24px', position: 'relative', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowPaymentSetupModal(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#888' }}>
+              <i className="las la-times"></i>
+            </button>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', color: '#333' }}>Setup Payment Details</h3>
+            
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              {[
+                { name: 'bKash', iconUrl: 'https://sandbox.sslcommerz.com/gwprocess/v4/image/gw/bkash.png' }, 
+                { name: 'Nagad', iconUrl: 'https://sandbox.sslcommerz.com/gwprocess/v4/image/gw/nagad.png' }, 
+                { name: 'Bank', icon: 'las la-university' }
+              ].map(method => (
+                <button 
+                  key={method.name}
+                  onClick={() => { setSelectedPayment(method.name); setNewPaymentInput(''); }}
+                  style={{ flex: 1, padding: '10px', border: `1px solid ${selectedPayment === method.name ? '#E91E63' : '#ddd'}`, background: selectedPayment === method.name ? '#FFF0F5' : '#fff', color: selectedPayment === method.name ? '#E91E63' : '#666', borderRadius: '8px', fontSize: '14px', fontWeight: selectedPayment === method.name ? 'bold' : 'normal', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
+                >
+                  {method.iconUrl ? (
+                    <img src={method.iconUrl} alt={method.name} style={{ height: '18px', objectFit: 'contain' }} />
+                  ) : (
+                    <>
+                      <i className={method.icon} style={{ fontSize: '18px' }}></i>
+                      {method.name}
+                    </>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <input 
+                type="text" 
+                placeholder={selectedPayment === 'Bank' ? 'Enter Bank Account details' : `Enter ${selectedPayment} number`}
+                value={newPaymentInput}
+                onChange={e => setNewPaymentInput(e.target.value)}
+                style={{ padding: '14px 16px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px', outline: 'none' }}
+              />
+              <button 
+                onClick={() => {
+                  if(!newPaymentInput.trim()) return alert('Please enter details.');
+                  setSavedPayments(prev => ({ ...prev, [selectedPayment]: newPaymentInput.trim() }));
+                  setNewPaymentInput('');
+                  setShowPaymentSetupModal(false);
+                }}
+                style={{ padding: '14px', background: '#E91E63', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', transition: 'background 0.2s' }}
+              >
+                Save & Continue
+              </button>
+            </div>
+            
+            {savedPayments[selectedPayment] && (
+              <div style={{ marginTop: '16px', padding: '12px', background: '#e8f5e9', borderRadius: '8px', fontSize: '13px', color: '#2e7d32', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="las la-check-circle" style={{ fontSize: '18px' }}></i> 
+                <div>
+                  <strong>Saved:</strong> {savedPayments[selectedPayment]}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

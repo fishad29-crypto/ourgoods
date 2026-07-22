@@ -1,119 +1,62 @@
-const DB_NAME = 'MediaManagerDB';
-const DB_VERSION = 1;
-const STORE_NAME = 'mediaFiles';
-
-let dbPromise = null;
-
-export const initDB = () => {
-  if (!dbPromise) {
-    dbPromise = new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-        }
-      };
-
-      request.onsuccess = (event) => resolve(event.target.result);
-      request.onerror = (event) => reject(event.target.error);
-    });
-  }
-  return dbPromise;
-};
-
 export const saveMedia = async (mediaItem) => {
-  const db = await initDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-    // clone to avoid storing object URLs which can cause issues or aren't needed in DB
-    const itemToStore = {
-      id: mediaItem.id,
-      name: mediaItem.name,
-      type: mediaItem.type,
-      size: mediaItem.size,
-      originalSize: mediaItem.originalSize,
-      rawFile: mediaItem.rawFile,
-      folderId: mediaItem.folderId || null
-    };
-    const request = store.put(itemToStore);
+  // If it's just a folder or doesn't have a raw file, return it
+  if (!mediaItem.rawFile) {
+    return mediaItem;
+  }
 
-    request.onsuccess = () => resolve(itemToStore);
-    request.onerror = (e) => reject(e.target.error);
+  const formData = new FormData();
+  formData.append('file', mediaItem.rawFile);
+
+  const response = await fetch('/api/media/upload', {
+    method: 'POST',
+    body: formData
   });
+
+  if (!response.ok) {
+    throw new Error('Upload failed');
+  }
+
+  const data = await response.json();
+  return {
+    ...mediaItem,
+    id: data.id,
+    name: data.name,
+    url: data.url,
+    size: data.size,
+    type: data.type
+  };
 };
 
 export const getAllMedia = async () => {
-  const db = await initDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.getAll();
-
-    request.onsuccess = (e) => {
-      // Recreate blob URLs for the loaded files so they can be rendered in the browser
-      const items = e.target.result.map(item => {
-        try {
-          return {
-            ...item,
-            url: URL.createObjectURL(item.rawFile)
-          };
-        } catch (err) {
-          console.error("Failed to create object URL for file", item, err);
-          return null;
-        }
-      }).filter(Boolean);
-      resolve(items);
-    };
-    request.onerror = (e) => reject(e.target.error);
-  });
+  try {
+    const response = await fetch('/api/media');
+    if (!response.ok) return [];
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch media", error);
+    return [];
+  }
 };
 
 export const deleteMedia = async (id) => {
-  const db = await initDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.delete(id);
-
-    request.onsuccess = () => resolve();
-    request.onerror = (e) => reject(e.target.error);
-  });
+  try {
+    const response = await fetch(`/api/media/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) {
+      throw new Error('Failed to delete media');
+    }
+  } catch (error) {
+    console.error("Error deleting media", error);
+    throw error;
+  }
 };
 
 export const deleteMultipleMedia = async (ids) => {
-  const db = await initDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-    
-    ids.forEach(id => store.delete(id));
-
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = (e) => reject(e.target.error);
-  });
-};
-
-export const updateMediaFolder = async (ids, folderId) => {
-  const db = await initDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-    
-    ids.forEach(id => {
-      const getReq = store.get(id);
-      getReq.onsuccess = (e) => {
-        const item = e.target.result;
-        if (item) {
-          item.folderId = folderId;
-          store.put(item);
-        }
-      };
-    });
-
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = (e) => reject(e.target.error);
-  });
+  // We'll delete them sequentially for now
+  for (const id of ids) {
+    await deleteMedia(id);
+  }
 };

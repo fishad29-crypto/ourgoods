@@ -443,3 +443,211 @@
 .add-product-option:hover {
   background: var(--admin-bg);
 }
+
+/* Inventory Styles */
+.inventory-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  background: var(--admin-surface);
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  gap: 16px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: var(--admin-bg);
+  padding: 10px 16px;
+  border-radius: 8px;
+  flex: 1;
+  max-width: 400px;
+}
+
+.search-bar input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  padding-left: 10px;
+  outline: none;
+  font-size: 14px;
+  color: var(--admin-text-main);
+}
+
+.search-icon {
+  color: var(--admin-text-muted);
+}
+
+.filter-group {
+  display: flex;
+  gap: 12px;
+}
+
+.filter-select-wrapper {
+  display: flex;
+  align-items: center;
+  background: var(--admin-bg);
+  padding: 10px 16px;
+  border-radius: 8px;
+  gap: 8px;
+}
+
+.filter-select-wrapper select {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  color: var(--admin-text-main);
+  cursor: pointer;
+}
+
+.filter-icon {
+  color: var(--admin-text-muted);
+}
+
+.bulk-actions-toolbar {
+  background: var(--admin-surface);
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: var(--shadow-sm);
+  font-weight: 500;
+  font-size: 14px;
+  border-left: 4px solid var(--status-warning);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--admin-surface);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-table th, .admin-table td {
+  padding: 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-table th {
+  background: rgba(0,0,0,0.02);
+  color: var(--admin-text-muted);
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+[data-theme='dark'] .admin-table th {
+  background: rgba(255,255,255,0.02);
+}
+
+.admin-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.admin-table tbody tr:hover {
+  background-color: var(--admin-bg);
+}
+
+.table-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--admin-border);
+}
+
+.product-title-cell {
+  font-weight: 500;
+  color: var(--admin-text-main);
+  margin-bottom: 4px;
+}
+
+.product-category-cell {
+  font-size: 12px;
+  color: var(--admin-text-muted);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge.status-success {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+
+.status-badge.status-warning {
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+}
+
+.status-badge.status-danger {
+  background: var(--status-danger-bg);
+  color: var(--status-danger);
+}
+
+.stock-adjust-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--admin-bg);
+  padding: 4px;
+  border-radius: 8px;
+  width: fit-content;
+  margin: 0 auto;
+}
+
+.stock-btn {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--admin-text-main);
+  transition: all 0.2s;
+}
+
+.stock-btn:hover {
+  background: var(--admin-primary);
+  color: white;
+  border-color: var(--admin-primary);
+}
+
+.stock-input {
+  width: 40px;
+  text-align: center;
+  border: none;
+  background: transparent;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--admin-text-main);
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.stock-input::-webkit-outer-spin-button,
+.stock-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

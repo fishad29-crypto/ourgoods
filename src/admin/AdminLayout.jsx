@@ -5,7 +5,7 @@ import {
   Box, Truck, CreditCard, RefreshCcw, Megaphone, Globe, 
   Star, BarChart2, HeadphonesIcon, ShieldCheck, Bell, 
   DownloadCloud, Settings, Activity, Menu, Search, Sun, Moon,
-  ChevronDown, Wrench, Layers
+  ChevronDown, Wrench, Layers, PlusCircle
 } from 'lucide-react';
 import './admin.css';
 
@@ -28,8 +28,9 @@ const sidebarGroups = [
     title: 'Catalog',
     links: [
       { path: 'products', icon: Package, label: 'Products & Catalog' },
+      { path: 'products/add', icon: PlusCircle, label: 'Add Product' },
       { path: 'categories', icon: LayoutDashboard, label: 'Categories' },
-      { path: 'ourgoods-direct', icon: Store, label: 'OURGOODS Direct' },
+      { path: 'ourgoods-direct', icon: Store, label: 'OURGOODS' },
       { path: 'inventory', icon: Box, label: 'Inventory' }
     ]
   },
@@ -117,7 +118,7 @@ const AdminLayout = () => {
                 <NavLink 
                   key={link.path}
                   to={`/admin${link.path ? '/' + link.path : ''}`}
-                  end={link.path === ''}
+                  end={link.path === '' || link.path === 'products'}
                   className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
                 >
                   <link.icon />

@@ -267,7 +267,12 @@ const MediaManagerModal = ({ show, onClose, onSelect, initialSelected = [] }) =>
       } else if (file.type.startsWith('image/')) {
         try {
           const compressedFile = await imageCompression(file, options);
-          const url = URL.createObjectURL(compressedFile);
+          const url = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(compressedFile);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+          });
           newUploads.push({
             id: `up_${Date.now()}_${file.name}`,
             name: file.name,

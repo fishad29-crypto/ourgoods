@@ -16,12 +16,26 @@ const AdvancedProductBrowser = ({ tabLabel = 'All Products' }) => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    // Fetch all products for this tab to allow client-side filtering and sorting
-    const categoryToFetch = tabLabel === 'All Products' ? 'All' : tabLabel;
-    const fetchedProds = generateProducts(categoryToFetch, 500);
-    setProducts(fetchedProds);
-    setLoading(false);
+    const fetchProducts = () => {
+      setLoading(true);
+      // Fetch all products for this tab to allow client-side filtering and sorting
+      const categoryToFetch = tabLabel === 'All Products' ? 'All' : tabLabel;
+      const fetchedProds = generateProducts(categoryToFetch, 500);
+      setProducts(fetchedProds);
+      setLoading(false);
+    };
+
+    fetchProducts();
+
+    // Listen for cross-tab updates (e.g., when a product is published in Admin)
+    const handleStorageChange = (e) => {
+      if (e.key === 'userProductsCache') {
+        fetchProducts();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, [tabLabel]);
 
   const handleCategoryToggle = (categoryName) => {

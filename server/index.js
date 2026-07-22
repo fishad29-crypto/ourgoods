@@ -17,7 +17,8 @@ app.locals.db = db;
 
 // Routes
 app.use('/admin/products/import-from-link', importRoute);
-
+const mediaRoute = require('./routes/media');
+app.use('/api/media', mediaRoute);
 app.get('/', (req, res) => {
   res.send('OURGOODS Backend Server is running');
 });

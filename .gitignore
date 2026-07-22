@@ -28,3 +28,10 @@ dist-ssr
 .agents
 extracted_all
 server/node_modules
+ 
+all.zip
+shop.sql
+extracted_products/
+analyze_sql.cjs
+login_page.html
+*.png

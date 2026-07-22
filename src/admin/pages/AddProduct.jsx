@@ -63,7 +63,17 @@ const AddProduct = () => {
   const [images, setImages] = useState(() => {
     try {
       const saved = localStorage.getItem('addProductImages');
-      return saved ? JSON.parse(saved) : [];
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.map(img => {
+            if (typeof img === 'string' && img.startsWith('blob:')) return null;
+            if (img && typeof img === 'object' && img.url && img.url.startsWith('blob:')) return null;
+            return img;
+          }).filter(Boolean);
+        }
+      }
+      return [];
     } catch { return []; }
   });
   const [isCompressing, setIsCompressing] = useState(false);
@@ -114,14 +124,24 @@ const AddProduct = () => {
   const [formData, setFormData] = useState(() => {
     try {
       const saved = localStorage.getItem('addProductData');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Only keep ID if we are actually editing a product
+        const isEdit = new URLSearchParams(window.location.search).get('edit');
+        if (!isEdit) {
+          delete parsed.id;
+          parsed.category = [];
+          parsed.subcategory = [];
+        }
+        return parsed;
+      }
     } catch {}
     return {
       name: '', ribbon: '', description: '', features: '',
       infoSections: [],
       regularPrice: '', salePrice: '', costPrice: '',
       sku: '', stock: '', attributes: [{ name: 'Color', options: '' }, { name: 'Size', options: '' }],
-      category: ['All Products'], subcategory: '', brand: '', placements: [],
+      category: [], subcategory: [], brand: '', placements: [],
       vendor: 'OURGOODS Direct', type: 'Local Ready Stock',
       tags: '', weight: '', deliveryTime: '',
       returnPolicy: '7 Days Easy Return', status: 'Active',
@@ -156,7 +176,8 @@ const AddProduct = () => {
     const editId = params.get('edit');
     if (editId) {
       const product = getProductById(editId);
-      if (product) {
+      // Only load product data if we don't already have a draft for this specific product
+      if (product && formData.id !== editId) {
         setFormData(prev => ({
           ...prev,
           id: product.id,
@@ -166,8 +187,8 @@ const AddProduct = () => {
           sku: product.sku || product.id || '',
           category: product.category || '',
           attributes: [
-            { name: 'Color', options: (product.colors || []).join(', ') },
-            { name: 'Size', options: (product.sizes || []).join(', ') }
+            { name: 'Color', options: Array.isArray(product.colors) ? product.colors.join(', ') : (product.colors || '') },
+            { name: 'Size', options: Array.isArray(product.sizes) ? product.sizes.join(', ') : (product.sizes || '') }
           ]
         }));
         
@@ -341,7 +362,7 @@ const AddProduct = () => {
 
       for (const file of localFiles) {
         if (file.type.startsWith('video/')) {
-          const url = URL.createObjectURL(file);
+          const url = await fileToBase64(file);
           newImages.push({
             name: file.name,
             originalSize: file.size,
@@ -352,7 +373,7 @@ const AddProduct = () => {
         } else if (file.type.startsWith('image/')) {
           try {
             const compressedFile = await imageCompression(file, options);
-            const url = URL.createObjectURL(compressedFile);
+            const url = await fileToBase64(compressedFile);
             newImages.push({
               name: file.name,
               originalSize: file.size,
@@ -370,6 +391,13 @@ const AddProduct = () => {
     }
   };
 
+  const fileToBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
@@ -378,15 +406,15 @@ const AddProduct = () => {
     const newImages = [];
 
     const options = {
-      maxSizeMB: 0.5,
-      maxWidthOrHeight: 1200,
+      maxSizeMB: 0.1,
+      maxWidthOrHeight: 800,
       useWebWorker: true,
-      initialQuality: 0.8
+      initialQuality: 0.7
     };
 
     for (const file of files) {
       if (file.type.startsWith('video/')) {
-        const url = URL.createObjectURL(file);
+        const url = await fileToBase64(file);
         newImages.push({
           name: file.name,
           originalSize: file.size,
@@ -397,7 +425,7 @@ const AddProduct = () => {
       } else if (file.type.startsWith('image/')) {
         try {
           const compressedFile = await imageCompression(file, options);
-          const url = URL.createObjectURL(compressedFile);
+          const url = await fileToBase64(compressedFile);
           newImages.push({
             name: file.name,
             originalSize: file.size,
@@ -673,6 +701,8 @@ const AddProduct = () => {
     setIsImporting(false);
   };
 
+  const [formErrors, setFormErrors] = useState({});
+
   const handleSaveDraft = () => {
     alert(`Draft saved! "${formData.name || 'Untitled Product'}" has been securely saved to your local drafts.`);
   };
@@ -680,30 +710,70 @@ const AddProduct = () => {
   const handlePublish = () => {
     const hasCategory = Array.isArray(formData.category) ? formData.category.length > 0 : !!formData.category;
     
-    if (!formData.name || !formData.salePrice || !hasCategory) {
-      alert("Please fill in all required fields (Name, Selling Price, Category) before publishing.");
+    const errors = {};
+    if (!formData.name) errors.name = true;
+    if (!formData.regularPrice) errors.regularPrice = true;
+    if (!formData.salePrice) errors.salePrice = true;
+    if (!hasCategory) errors.category = true;
+    if (images.length === 0) errors.images = true;
+    if (!formData.description || formData.description.replace(/<[^>]*>?/gm, '').trim() === '') errors.description = true;
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      alert("Please fill in all required fields (Name, Regular Price, Selling Price, Category, Description, Product Media) before publishing. Missing sections have been highlighted in red.");
+      
+      // Scroll to the first error
+      const firstErrorElement = document.querySelector('.error-section');
+      if (firstErrorElement) {
+        firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
+    setFormErrors({});
     
-    // Format categories to string if needed by backend, or just send array
-    const finalCategory = Array.isArray(formData.category) ? formData.category.join(', ') : formData.category;
-    const finalSubcategory = Array.isArray(formData.subcategory) ? formData.subcategory.join(', ') : formData.subcategory;
+    const originalId = formData.id || new URLSearchParams(location.search).get('edit');
 
     // Send to frontend site
     addProductToFrontend({
       ...formData,
-      category: finalCategory,
-      subcategory: finalSubcategory,
+      category: formData.category, // Keep as array
+      subcategory: formData.subcategory, // Keep as array
       type: productType,
       images: images,
-      colorImages: colorImageMap
+      colorImages: colorImageMap,
+      originalId: originalId // Pass the original ID to ensure correct replacement
     });
     
     localStorage.removeItem('addProductData');
     localStorage.removeItem('addProductImages');
     
-    alert(`Success! "${formData.name}" has been successfully published to the front site! You can now see it in New Arrivals and the ${finalCategory} category.`);
-    navigate('/admin/products');
+    // For the alert, we can join the array
+    const displayCategory = Array.isArray(formData.category) ? formData.category.join(', ') : formData.category;
+    alert(`Success! "${formData.name}" has been successfully published to the front site! You can now see it in New Arrivals and the ${displayCategory} category.`);
+    
+    // Clear form for adding a new product
+    setColorImageMap({});
+    setFormData({
+      name: '', description: '', features: '',
+      regularPrice: '', salePrice: '', costPrice: '',
+      sku: '', stock: '', attributes: [{ name: 'Color', options: '' }, { name: 'Size', options: '' }],
+      category: [], subcategory: [], brand: '',
+      vendor: 'OURGOODS Direct', type: 'Local Ready Stock',
+      tags: '', weight: '', deliveryTime: '',
+      returnPolicy: '7 Days Easy Return', status: 'Active',
+      seoTitle: '', seoDescription: ''
+    });
+    setImages([]);
+    setImportUrl('');
+    setRibbons([]);
+    setProductType('retail');
+
+    // If editing, redirect to clean add product URL
+    if (location.search.includes('edit=')) {
+      window.location.href = '/admin/products/add';
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleClearAll = () => {
@@ -715,7 +785,7 @@ const AddProduct = () => {
         name: '', description: '', features: '',
         regularPrice: '', salePrice: '', costPrice: '',
         sku: '', stock: '', attributes: [{ name: 'Color', options: '' }, { name: 'Size', options: '' }],
-        category: ['All Products'], subcategory: '', brand: '',
+        category: [], subcategory: [], brand: '',
         vendor: 'OURGOODS Direct', type: 'Local Ready Stock',
         tags: '', weight: '', deliveryTime: '',
         returnPolicy: '7 Days Easy Return', status: 'Active',
@@ -723,6 +793,9 @@ const AddProduct = () => {
       });
       setImages([]);
       setImportUrl('');
+      setRibbons([]);
+      setProductType('retail');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -760,6 +833,9 @@ const AddProduct = () => {
         </div>
 
         <div style={{ display: 'flex', gap: '12px' }}>
+          <button className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--brand-pink)', borderColor: 'var(--brand-pink)' }} onClick={() => alert('Bulk upload functionality coming soon!')}>
+            <UploadCloud size={18} /> Bulk Upload
+          </button>
           <button className="btn-outline" onClick={handleClearAll} style={{ color: '#ef4444', borderColor: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Trash2 size={18} /> Clear All
           </button>
@@ -774,7 +850,7 @@ const AddProduct = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* Media */}
-          <div className="form-section" style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+          <div className={`form-section ${formErrors.images ? 'error-section' : ''}`} style={{ backgroundColor: formErrors.images ? '#fef2f2' : '#ffffff', padding: '24px', borderRadius: '8px', border: formErrors.images ? '1px solid #ef4444' : '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
                 <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 600 }}>Product Media</h3>
@@ -897,7 +973,7 @@ const AddProduct = () => {
           
           {/* General Information */}
           {/* General Information */}
-          <div className="form-section" style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+          <div className={`form-section ${(formErrors.name || formErrors.description) ? 'error-section' : ''}`} style={{ backgroundColor: (formErrors.name || formErrors.description) ? '#fef2f2' : '#ffffff', padding: '24px', borderRadius: '8px', border: (formErrors.name || formErrors.description) ? '1px solid #ef4444' : '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
             <h3 style={{ margin: '0 0 20px 0', fontSize: '15px', fontWeight: 600, color: '#1e293b' }}>General Information</h3>
             
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '24px' }}>
@@ -1457,9 +1533,9 @@ const AddProduct = () => {
             </div>
           </div>
 
-            <div className="form-group" style={{ marginBottom: '32px' }}>
+            <div className={`form-section ${formErrors.description ? 'error-section' : ''}`} style={{ backgroundColor: formErrors.description ? '#fef2f2' : '#ffffff', padding: '24px', borderRadius: '8px', border: formErrors.description ? '1px solid #ef4444' : '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', marginBottom: '32px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <label className="form-label" style={{ margin: 0, fontSize: '13px', color: '#475569' }}>Description</label>
+                <label className="form-label" style={{ margin: 0, fontSize: '13px', color: formErrors.description ? '#dc2626' : '#475569' }}>Description</label>
                 <button 
                   type="button"
                   onClick={handleAutoFill}
@@ -1472,11 +1548,14 @@ const AddProduct = () => {
                 </button>
               </div>
               
-              <RichTextEditor 
-                value={formData.description} 
-                onChange={(val) => setFormData(prev => ({ ...prev, description: val }))} 
-                placeholder="Describe your product here..." 
-              />
+              <div style={formErrors.description ? { border: '1px solid #ef4444', borderRadius: '4px' } : {}}>
+                <RichTextEditor 
+                  value={formData.description} 
+                  onChange={(val) => setFormData(prev => ({ ...prev, description: val }))} 
+                  placeholder="Describe your product here..." 
+                />
+              </div>
+              {formErrors.description && <p style={{ color: '#dc2626', fontSize: '12px', margin: '4px 0 0 0' }}>Please enter a product description.</p>}
             </div>
             
             <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: '32px -24px 24px -24px' }} />
@@ -1530,7 +1609,7 @@ const AddProduct = () => {
           </div>
 
           {/* Pricing */}
-          <div className="form-section" style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+          <div className={`form-section ${(formErrors.salePrice || formErrors.regularPrice) ? 'error-section' : ''}`} style={{ backgroundColor: (formErrors.salePrice || formErrors.regularPrice) ? '#fef2f2' : '#ffffff', padding: '24px', borderRadius: '8px', border: (formErrors.salePrice || formErrors.regularPrice) ? '1px solid #ef4444' : '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
             <div style={{ marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>{productType === 'factory' ? 'Wholesale Pricing' : 'Retail Pricing'}</h3>
             </div>
@@ -1558,7 +1637,7 @@ const AddProduct = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div className="form-group">
-                <label className="form-label">Cost of Goods (৳)</label>
+                <label className="form-label">Cost of Goods (৳) <span style={{ fontSize: '12px', color: '#888', fontWeight: 'normal', marginLeft: '8px' }}>(Not connected to frontend yet)</span></label>
                 <input type="number" name="costPrice" className="form-input" placeholder="0.00" value={formData.costPrice || ''} onChange={handleChange} />
               </div>
               <div className="form-group">
@@ -1615,7 +1694,7 @@ const AddProduct = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
               <div className="form-group">
-                <label className="form-label">Measurement / Weight</label>
+                <label className="form-label">Measurement / Weight <span style={{ fontSize: '12px', color: '#888', fontWeight: 'normal', marginLeft: '8px' }}>(Not connected to frontend yet)</span></label>
                 <div style={{ display: 'flex' }}>
                   <input type="number" name="weight" className="form-input" placeholder="0.80" value={formData.weight || ''} onChange={handleChange} style={{ flex: 2, borderTopRightRadius: 0, borderBottomRightRadius: 0, borderRight: 'none', margin: 0 }} />
                   <select name="measurementUnit" className="form-input" style={{ flex: 1, padding: '8px 12px', borderTopLeftRadius: 0, borderBottomLeftRadius: 0, backgroundColor: '#f8fafc', color: '#475569', fontWeight: 500, margin: 0 }} value={formData.measurementUnit || 'kg'} onChange={handleChange}>
@@ -1686,7 +1765,7 @@ const AddProduct = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* Categories */}
-          <div className="form-section" style={{ backgroundColor: 'var(--admin-surface)', padding: '24px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
+          <div className={`form-section ${formErrors.category ? 'error-section' : ''}`} style={{ backgroundColor: formErrors.category ? '#fef2f2' : 'var(--admin-surface)', padding: '24px', borderRadius: '12px', border: formErrors.category ? '1px solid #ef4444' : '1px solid var(--admin-border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Categories</h3>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -1943,7 +2022,9 @@ const AddProduct = () => {
                 { name: 'Global Shop', icon: 'las la-globe' },
                 { name: 'Factory Direct', icon: 'las la-industry' },
                 { name: 'Combo & Choice', icon: 'las la-boxes' },
-                { name: 'Top Trends', icon: 'las la-fire' }
+                { name: 'Top Trends', icon: 'las la-fire' },
+                { name: 'Cash on Delivery', icon: 'las la-money-bill-wave' },
+                { name: 'New Arrival', icon: 'las la-star' }
               ].map(placement => {
                 const currentPlacements = Array.isArray(formData.placements) ? formData.placements : (formData.placements ? formData.placements.split(', ') : []);
                 const isChecked = currentPlacements.includes(placement.name);
@@ -1974,7 +2055,7 @@ const AddProduct = () => {
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div className="form-group">
-                <label className="form-label">Brand</label>
+                <label className="form-label">Brand <span style={{ fontSize: '12px', color: '#888', fontWeight: 'normal', marginLeft: '8px' }}>(Not connected to frontend yet)</span></label>
                 <input type="text" name="brand" className="form-input" placeholder="Brand name" value={formData.brand} onChange={handleChange} />
               </div>
               <div className="form-group">
@@ -1982,7 +2063,7 @@ const AddProduct = () => {
                 <input type="text" name="vendorLocation" className="form-input" placeholder="e.g. Dhaka, Bangladesh" value={formData.vendorLocation || ''} onChange={handleChange} />
               </div>
               <div className="form-group">
-                <label className="form-label">Vendor / Seller</label>
+                <label className="form-label">Vendor / Seller <span style={{ fontSize: '12px', color: '#888', fontWeight: 'normal', marginLeft: '8px' }}>(Not connected to frontend yet)</span></label>
                 <select className="form-input" name="vendor" value={formData.vendor} onChange={handleChange}>
                   <option value="OURGOODS Direct">OURGOODS Direct</option>
                   <option value="Vendor A">Vendor A</option>
@@ -1990,7 +2071,7 @@ const AddProduct = () => {
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">Tags</label>
+                <label className="form-label">Tags <span style={{ fontSize: '12px', color: '#888', fontWeight: 'normal', marginLeft: '8px' }}>(Not connected to frontend yet)</span></label>
                 <input type="text" name="tags" className="form-input" placeholder="e.g. summer, trendy, sale" value={formData.tags} onChange={handleChange} />
               </div>
             </div>
@@ -2001,95 +2082,63 @@ const AddProduct = () => {
             <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '16px', fontWeight: 600 }}>Shipping & Policies</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div className="form-group">
-                <label className="form-label">Estimated Delivery Time</label>
-                <input type="text" name="deliveryTime" className="form-input" placeholder="e.g. 2-4 Days" value={formData.deliveryTime} onChange={handleChange} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Return Policy</label>
-                <select className="form-input" name="returnPolicy" value={formData.returnPolicy} onChange={handleChange}>
-                  <option value="7 Days Easy Return">7 Days Easy Return</option>
-                  <option value="No Return Policy">No Return Policy</option>
-                  <option value="Replacement Only">Replacement Only</option>
-                </select>
-              </div>
-              <div className="form-group" style={{ marginTop: '8px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
-                <label className="form-label" style={{ marginBottom: '12px' }}>Display Settings</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '13px', color: '#475569', fontWeight: 600 }}>Delivery Estimates</label>
+                <label className="form-label" style={{ marginBottom: '12px' }}>Delivery Estimates</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input type="radio" name="deliveryBannerType" value="24-48h" checked={(formData.deliveryBannerType || '24-48h') === '24-48h'} onChange={(e) => setFormData(prev => ({...prev, deliveryBannerType: e.target.value, isCreatingCustomDelivery: false}))} style={{ accentColor: '#E43292' }} />
+                    <span style={{ fontSize: '14px', color: '#334155' }}>24-48h (Show vendor location)</span>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input type="radio" name="deliveryBannerType" value="1-5days" checked={formData.deliveryBannerType === '1-5days'} onChange={(e) => setFormData(prev => ({...prev, deliveryBannerType: e.target.value, isCreatingCustomDelivery: false}))} style={{ accentColor: '#E43292' }} />
+                    <span style={{ fontSize: '14px', color: '#334155' }}>1-5 days in Bangladesh & 1-2 days in Dhaka</span>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input type="radio" name="deliveryBannerType" value="global" checked={formData.deliveryBannerType === 'global'} onChange={(e) => setFormData(prev => ({...prev, deliveryBannerType: e.target.value, isCreatingCustomDelivery: false}))} style={{ accentColor: '#E43292' }} />
+                    <span style={{ fontSize: '14px', color: '#334155' }}>Standard (21-28 days) & Express (4-7 days)</span>
+                  </label>
+                  
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input type="radio" name="deliveryBannerType" value="none" checked={formData.deliveryBannerType === 'none'} onChange={(e) => setFormData(prev => ({...prev, deliveryBannerType: e.target.value, isCreatingCustomDelivery: false}))} style={{ accentColor: '#E43292' }} />
+                    <span style={{ fontSize: '14px', color: '#334155' }}>Don't show delivery estimates</span>
+                  </label>
+
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flexDirection: 'column', marginTop: '4px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                      <input type="radio" name="deliveryBannerType" value="custom" checked={formData.isCreatingCustomDelivery || (formData.deliveryBannerType && formData.deliveryBannerType.startsWith('custom:'))} onChange={() => setFormData(prev => ({...prev, isCreatingCustomDelivery: true, customDeliveryText: prev.customDeliveryText || (prev.deliveryBannerType?.startsWith('custom:') ? prev.deliveryBannerType.replace('custom:', '') : '')}))} style={{ accentColor: '#E43292' }} />
+                      <span style={{ fontSize: '14px', color: '#334155' }}>Custom Delivery</span>
+                    </label>
                     
-                    {!formData.isCreatingCustomDelivery ? (
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                        <select 
-                          className="form-input" 
-                          style={{ maxWidth: '400px' }}
-                          value={formData.deliveryBannerType || '24-48h'}
-                          onChange={(e) => setFormData(prev => ({...prev, deliveryBannerType: e.target.value}))}
-                        >
-                          <option value="24-48h">24-48h (Show vendor location)</option>
-                          <option value="global">21-28 day (Standard) & 4-7 days (Express)</option>
-                          <option value="1-5days">1-5 days in Bangladesh & 1-2 days in Dhaka</option>
-                          {formData.deliveryBannerType && formData.deliveryBannerType.startsWith('custom:') && (
-                            <option value={formData.deliveryBannerType}>
-                              {formData.deliveryBannerType.replace('custom:', '')}
-                            </option>
-                          )}
-                          <option value="none">Don't show delivery estimates</option>
-                        </select>
-                        <button 
-                          type="button"
-                          onClick={() => setFormData(prev => ({...prev, isCreatingCustomDelivery: true, customDeliveryText: ''}))}
-                          style={{ padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', color: '#334155', fontWeight: 500 }}
-                        >
-                          + Custom Create
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {(formData.isCreatingCustomDelivery || (formData.deliveryBannerType && formData.deliveryBannerType.startsWith('custom:'))) && (
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: '24px', width: '100%' }}>
                         <input 
                           type="text" 
                           className="form-input" 
                           placeholder="e.g., 7-14 Days Express"
-                          style={{ maxWidth: '400px' }}
+                          style={{ maxWidth: '300px' }}
                           value={formData.customDeliveryText || ''}
-                          onChange={(e) => setFormData(prev => ({...prev, customDeliveryText: e.target.value}))}
-                        />
-                        <button 
-                          type="button"
-                          onClick={() => {
-                            if(formData.customDeliveryText) {
-                              setFormData(prev => ({
-                                ...prev, 
-                                deliveryBannerType: 'custom:' + prev.customDeliveryText,
-                                isCreatingCustomDelivery: false
-                              }));
-                            }
+                          onChange={(e) => {
+                             const val = e.target.value;
+                             setFormData(prev => ({...prev, customDeliveryText: val, deliveryBannerType: val ? 'custom:' + val : 'custom:' }));
                           }}
-                          style={{ padding: '8px 16px', background: 'var(--brand-pink)', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', color: '#fff', fontWeight: 500 }}
-                        >
-                          Save Option
-                        </button>
-                        <button 
-                          type="button"
-                          onClick={() => setFormData(prev => ({...prev, isCreatingCustomDelivery: false}))}
-                          style={{ padding: '8px 12px', background: 'transparent', border: 'none', fontSize: '13px', cursor: 'pointer', color: '#64748b', fontWeight: 500 }}
-                        >
-                          Cancel
-                        </button>
+                        />
                       </div>
                     )}
                   </div>
-                  
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '12px' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={formData.showSameDayDelivery === true}
-                      onChange={(e) => setFormData(prev => ({...prev, showSameDayDelivery: e.target.checked}))}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#E43292' }}
-                    />
-                    <span style={{ fontSize: '14px', color: '#334155', fontWeight: 500 }}>Available for Same Day Delivery (before 12pm)</span>
-                  </label>
-                  
+                </div>
+              </div>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '8px' }}>
+                <input 
+                  type="checkbox" 
+                  checked={formData.showSameDayDelivery === true}
+                  onChange={(e) => setFormData(prev => ({...prev, showSameDayDelivery: e.target.checked}))}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#E43292' }}
+                />
+                <span style={{ fontSize: '14px', color: '#334155', fontWeight: 500 }}>Available for Same Day Delivery (before 12pm)</span>
+              </label>
                   <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
                     <label style={{ fontSize: '13px', color: '#475569', fontWeight: 600, paddingBottom: '8px', display: 'block' }}>Payment Policy</label>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -2107,10 +2156,7 @@ const AddProduct = () => {
                       </label>
                     </div>
                   </div>
-                  
 
-                </div>
-              </div>
             </div>
           </div>
 
@@ -2127,11 +2173,11 @@ const AddProduct = () => {
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">SEO Title</label>
+                <label className="form-label">SEO Title <span style={{ fontSize: '12px', color: '#888', fontWeight: 'normal', marginLeft: '8px' }}>(Not connected to frontend yet)</span></label>
                 <input type="text" name="seoTitle" className="form-input" placeholder="Meta Title" value={formData.seoTitle} onChange={handleChange} />
               </div>
               <div className="form-group">
-                <label className="form-label">SEO Description</label>
+                <label className="form-label">SEO Description <span style={{ fontSize: '12px', color: '#888', fontWeight: 'normal', marginLeft: '8px' }}>(Not connected to frontend yet)</span></label>
                 <textarea name="seoDescription" className="form-input" rows="3" placeholder="Meta Description" value={formData.seoDescription} onChange={handleChange}></textarea>
               </div>
             </div>

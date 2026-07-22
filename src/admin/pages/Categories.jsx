@@ -104,22 +104,29 @@ const Categories = () => {
 
   return (
     <div className="admin-content">
-      <div className="page-header">
-        <h2 className="page-title">Category Management</h2>
-        <button className="btn-primary" onClick={handleAddCategory}>
-          <Plus size={18} /> Add Category
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 className="page-title">Category Management</h2>
+          <p style={{ color: '#64748b', fontSize: '14px', marginTop: '4px' }}>Organize your products into categories and subcategories.</p>
+        </div>
+        <button 
+          onClick={handleAddCategory}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'var(--brand-pink)', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#fff', fontSize: '14px', fontWeight: 500 }}
+        >
+          <Plus size={16} /> Add Category
         </button>
       </div>
 
-      <div className="table-container" style={{ padding: '24px', backgroundColor: 'transparent', boxShadow: 'none', border: 'none' }}>
+      <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '24px' }}>
         <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="header-search" style={{ width: '300px', backgroundColor: 'white' }}>
-            <Search size={18} color="var(--admin-text-muted)" />
+          <div className="search-bar" style={{ width: '300px', margin: 0 }}>
+            <Search size={18} className="search-icon" style={{ left: '12px' }} />
             <input 
               type="text" 
               placeholder="Search categories..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ width: '100%', padding: '10px 10px 10px 40px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px' }}
             />
           </div>
         </div>
@@ -133,11 +140,10 @@ const Categories = () => {
 
             return (
               <div key={cat.id} style={{ 
-                border: '1px solid var(--admin-border)', 
+                border: '1px solid #e2e8f0', 
                 borderRadius: '12px', 
                 overflow: 'hidden', 
-                backgroundColor: 'white', 
-                boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                backgroundColor: '#fff', 
                 opacity: isActive ? 1 : 0.6
               }}>
                 {/* Category Header */}
@@ -149,18 +155,18 @@ const Categories = () => {
                     alignItems: 'center', 
                     justifyContent: 'space-between',
                     cursor: 'pointer',
-                    backgroundColor: isCatExpanded ? '#f8fafc' : 'white',
-                    borderBottom: isCatExpanded ? '1px solid var(--admin-border)' : 'none',
+                    backgroundColor: isCatExpanded ? '#f8fafc' : '#fff',
+                    borderBottom: isCatExpanded ? '1px solid #e2e8f0' : 'none',
                     transition: 'background-color 0.2s'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    {cat.icon && <i className={cat.icon} style={{ fontSize: '20px', color: 'var(--brand-pink)' }}></i>}
-                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#1e293b' }}>{cat.name}</h3>
+                    {cat.icon && <i className={cat.icon} style={{ fontSize: '20px', color: '#db2777' }}></i>}
+                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#0f172a' }}>{cat.name}</h3>
                   </div>
                   
                   <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    <span style={{ fontSize: '13px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 12px', borderRadius: '16px', fontWeight: 500 }}>
+                    <span style={{ fontSize: '13px', color: '#475569', backgroundColor: '#f1f5f9', padding: '4px 12px', borderRadius: '16px', fontWeight: 500 }}>
                       {catProducts.length} Products
                     </span>
                     
@@ -173,8 +179,8 @@ const Categories = () => {
                         fontSize: '11px',
                         fontWeight: 'bold',
                         cursor: 'pointer',
-                        backgroundColor: isActive ? 'var(--status-success)' : '#f1f5f9',
-                        color: isActive ? 'white' : '#64748b',
+                        backgroundColor: isActive ? '#dcfce7' : '#f1f5f9',
+                        color: isActive ? '#16a34a' : '#64748b',
                         transition: 'all 0.2s'
                       }}
                     >
@@ -182,8 +188,8 @@ const Categories = () => {
                     </button>
                     
                     <div style={{ display: 'flex', gap: '8px', borderLeft: '1px solid #e2e8f0', paddingLeft: '16px' }}>
-                      <button className="icon-btn" title="Edit Category" onClick={(e) => { e.stopPropagation(); handleEditCategory(cat); }}><Edit size={16} /></button>
-                      <button className="icon-btn" style={{ color: 'var(--status-danger)' }} title="Delete Category" onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat); }}><Trash2 size={16} /></button>
+                      <button style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }} title="Edit Category" onClick={(e) => { e.stopPropagation(); handleEditCategory(cat); }}><Edit size={16} /></button>
+                      <button style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }} title="Delete Category" onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat); }}><Trash2 size={16} /></button>
                     </div>
                   </div>
                 </div>
@@ -206,15 +212,15 @@ const Categories = () => {
                               display: 'flex', 
                               alignItems: 'center', 
                               justifyContent: 'space-between',
-                              backgroundColor: 'white',
+                              backgroundColor: '#fff',
                               transition: 'background-color 0.2s'
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                               {sub.img ? (
-                                <img src={sub.img} alt={sub.name} style={{ width: '30px', height: '30px', borderRadius: '6px', objectFit: 'cover' }} />
+                                <img src={sub.img} alt={sub.name} style={{ width: '32px', height: '32px', borderRadius: '6px', objectFit: 'cover' }} />
                               ) : (
-                                <div style={{ width: '30px', height: '30px', borderRadius: '6px', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <div style={{ width: '32px', height: '32px', borderRadius: '6px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                   <Layers size={14} color="#94a3b8" />
                                 </div>
                               )}
@@ -222,7 +228,7 @@ const Categories = () => {
                             </div>
                             
                             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                              <span style={{ fontSize: '12px', color: '#64748b' }}>{subProductsCount} Items</span>
+                              <span style={{ fontSize: '13px', color: '#64748b' }}>{subProductsCount} Items</span>
                               
                               <button
                                 onClick={() => toggleSubcategoryStatus(cat.name, sub)}
@@ -233,17 +239,17 @@ const Categories = () => {
                                   fontSize: '11px',
                                   fontWeight: 'bold',
                                   cursor: 'pointer',
-                                  backgroundColor: isSubActive ? 'var(--status-success)' : '#f1f5f9',
-                                  color: isSubActive ? 'white' : '#64748b',
+                                  backgroundColor: isSubActive ? '#dcfce7' : '#f1f5f9',
+                                  color: isSubActive ? '#16a34a' : '#64748b',
                                   transition: 'all 0.2s'
                                 }}
                               >
                                 {isSubActive ? 'ON' : 'OFF'}
                               </button>
                               
-                              <div style={{ display: 'flex', gap: '12px', borderLeft: '1px solid #e2e8f0', paddingLeft: '16px' }}>
-                                <button className="icon-btn" title="Edit Subcategory" onClick={() => handleEditSubcategory(cat.name, sub)}><Edit size={16} /></button>
-                                <button className="icon-btn" style={{ color: 'var(--status-danger)' }} title="Delete Subcategory" onClick={() => handleDeleteSubcategory(cat.name, sub)}><Trash2 size={16} /></button>
+                              <div style={{ display: 'flex', gap: '8px', borderLeft: '1px solid #e2e8f0', paddingLeft: '16px' }}>
+                                <button style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }} title="Edit Subcategory" onClick={() => handleEditSubcategory(cat.name, sub)}><Edit size={16} /></button>
+                                <button style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }} title="Delete Subcategory" onClick={() => handleDeleteSubcategory(cat.name, sub)}><Trash2 size={16} /></button>
                               </div>
                             </div>
                           </div>
@@ -254,18 +260,18 @@ const Categories = () => {
                     {/* Add Subcategory Inline UI */}
                     <div style={{ 
                       padding: '16px 24px 24px 48px', 
-                      backgroundColor: '#fafafa', 
+                      backgroundColor: '#f8fafc', 
                       borderTop: subs.length > 0 ? '1px solid #f1f5f9' : 'none' 
                     }}>
                       {!addingToCategory || addingToCategory !== cat.name ? (
                         <button 
                           onClick={() => setAddingToCategory(cat.name)}
-                          style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--brand-pink)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#db2777', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px' }}
                         >
                           <Plus size={16} /> Add Subcategory
                         </button>
                       ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', maxWidth: '600px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', maxWidth: '600px' }}>
                           <div 
                             onClick={() => setShowMediaModal(true)} 
                             style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#f1f5f9', border: '1px dashed #cbd5e1', cursor: 'pointer', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
@@ -278,11 +284,11 @@ const Categories = () => {
                             placeholder="Enter Subcategory Name" 
                             value={newSubName} 
                             onChange={(e) => setNewSubName(e.target.value)} 
-                            style={{ padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', flex: 1, fontSize: '13px' }}
+                            style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', flex: 1, fontSize: '13px' }}
                             autoFocus
                           />
-                          <button className="btn-primary" onClick={() => submitAddSubcategory(cat.name)} style={{ padding: '6px 16px', fontSize: '13px' }}>Save</button>
-                          <button className="btn-outline" onClick={() => { setAddingToCategory(null); setNewSubName(''); setNewSubImage(''); }} style={{ padding: '6px 16px', fontSize: '13px' }}>Cancel</button>
+                          <button style={{ padding: '6px 16px', fontSize: '13px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }} onClick={() => submitAddSubcategory(cat.name)}>Save</button>
+                          <button style={{ padding: '6px 16px', fontSize: '13px', background: '#fff', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer' }} onClick={() => { setAddingToCategory(null); setNewSubName(''); setNewSubImage(''); }}>Cancel</button>
                         </div>
                       )}
                     </div>

@@ -62,15 +62,11 @@ const ProductsCatalog = () => {
 
   return (
     <div className="admin-content">
-      <div className="page-header">
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 className="page-title">Products & Catalog ({filteredProducts.length})</h2>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button className="btn-outline" onClick={() => setShowBulkModal(true)}>Bulk Upload</button>
-
-          
-          <button className="btn-primary" onClick={() => navigate('/admin/products/add')}>
-            <Plus size={18} /> Add Product
-          </button>
+          <button className="btn-outline" onClick={() => setShowBulkModal(true)}><UploadCloud size={18} style={{ marginRight: '6px' }} /> Bulk Input</button>
+          <button className="btn-primary" onClick={() => navigate('/admin/products/add')}><Plus size={18} style={{ marginRight: '6px' }} /> Add Product</button>
         </div>
       </div>
 
@@ -168,20 +164,20 @@ const ProductsCatalog = () => {
                           </div>
                         )}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontWeight: 600 }}>{product.name}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', maxWidth: '250px' }}>
+                        <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={product.name}>{product.name}</span>
                         {product.brand && (
-                          <span style={{ fontSize: '13px', color: 'var(--admin-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '13px', color: 'var(--admin-text-muted)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
                             <span>•</span>
-                            {product.brand}
+                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100px' }} title={product.brand}>{product.brand}</span>
                           </span>
                         )}
                       </div>
                     </div>
                   </td>
-                  <td>{product.sku}</td>
-                  <td>{product.category}</td>
-                  <td>{product.vendor}</td>
+                  <td style={{ maxWidth: '120px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={product.sku}>{product.sku}</td>
+                  <td style={{ maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={product.category}>{product.category}</td>
+                  <td style={{ maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={product.vendor}>{product.vendor}</td>
                   <td>
                     <span style={{ fontSize: '12px', padding: '2px 6px', backgroundColor: 'var(--admin-bg)', borderRadius: '4px' }}>
                       {product.type}

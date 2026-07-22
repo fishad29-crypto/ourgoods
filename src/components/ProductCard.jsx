@@ -73,26 +73,38 @@ const ProductCard = ({ product }) => {
             CHOICE
           </div>
         )}
-        {(product.image && (
-          product.image.match(/\.(mp4|webm|ogg)$/i) || 
-          product.image.startsWith('data:video/') || 
-          (product.imageType && product.imageType.startsWith('video/'))
-        )) ? (
-          <video 
-            ref={videoRef}
-            src={product.image} 
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
-            muted 
-            loop 
-            playsInline 
-          />
-        ) : (
-          <img 
-            src={product.image} 
-            alt={product.title} 
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
-          />
-        )}
+        {(() => {
+          const imgUrl = (product.images && product.images.length > 0) 
+            ? (typeof product.images[0] === 'string' ? product.images[0] : (product.images[0].url || product.images[0].src || product.image))
+            : product.image;
+          const safeUrl = typeof imgUrl === 'string' ? imgUrl : "https://via.placeholder.com/500x500.png?text=Broken+Image";
+          
+          if (
+            safeUrl.match(/\.(mp4|webm|ogg)$/i) || 
+            safeUrl.startsWith('data:video/') || 
+            (product.imageType && product.imageType.startsWith('video/'))
+          ) {
+            return (
+              <video 
+                ref={videoRef}
+                src={safeUrl} 
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
+                muted 
+                loop 
+                playsInline 
+              />
+            );
+          } else {
+            return (
+              <img 
+                src={safeUrl} 
+                alt={product.title} 
+                onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/500x500.png?text=Image+Load+Error"; }}
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} 
+              />
+            );
+          }
+        })()}
       </div>
       
       <div style={{ padding: '8px 8px 12px 8px', display: 'flex', flexDirection: 'column', flex: 1 }}>
