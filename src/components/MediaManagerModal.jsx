@@ -611,8 +611,10 @@ const MediaManagerModal = ({ show, onClose, onSelect, initialSelected = [] }) =>
           <button 
             className="mm-btn-primary" 
             onClick={handleAddToPage}
+            disabled={selectedFiles.length === 0}
+            style={{ opacity: selectedFiles.length === 0 ? 0.5 : 1, cursor: selectedFiles.length === 0 ? 'not-allowed' : 'pointer' }}
           >
-            Update Selection
+            {selectedFiles.length > 0 ? 'Update Selection' : 'Select an Image'}
           </button>
         </div>
       </div>

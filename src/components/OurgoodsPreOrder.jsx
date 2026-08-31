@@ -93,7 +93,7 @@ const OurgoodsPreOrder = () => {
           </div>
 
           <div 
-            onClick={() => saveScrollAndNavigate(navigate, '/market/global-shop')}
+            onClick={() => saveScrollAndNavigate(navigate, '/global-shop')}
             style={{ color: '#fff', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', flexShrink: 0 }}>
             View All <i className="las la-angle-right" style={{ fontSize: '14px' }}></i>
           </div>

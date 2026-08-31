@@ -6,8 +6,11 @@ import DailyDiscover from './DailyDiscover';
 import OurgoodsStock from './OurgoodsStock';
 import OurgoodsPreOrder from './OurgoodsPreOrder';
 import OurgoodsWholesale from './OurgoodsWholesale';
+import { useHomepageLayout } from '../utils/MockData';
 
 const HomePage = () => {
+  const homepageLayout = useHomepageLayout();
+
   useEffect(() => {
     const savedScroll = sessionStorage.getItem(`scroll_${window.location.pathname}`);
     if (savedScroll) {
@@ -33,11 +36,15 @@ const HomePage = () => {
 
   return (
     <div className="content-container" style={{ paddingBottom: '0' }}>
-      <HeroSlider />
+      {homepageLayout.heroSlider && <HeroSlider />}
       <div className="three-col-desktop">
-        <FlashSale />
-        <OurgoodsPreOrder />
-        <OurgoodsWholesale />
+        {(homepageLayout.sections || []).map(section => {
+          if (!section.visible) return null;
+          if (section.id === 'flashSale') return <FlashSale key="flashSale" />;
+          if (section.id === 'globalShop') return <OurgoodsPreOrder key="globalShop" />;
+          if (section.id === 'factoryDirect') return <OurgoodsWholesale key="factoryDirect" />;
+          return null;
+        })}
       </div>
       <DailyDiscover />
     </div>

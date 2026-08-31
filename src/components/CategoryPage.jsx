@@ -4,6 +4,7 @@ import CategoryOccasions from './CategoryOccasions';
 import CategorySubcategories from './CategorySubcategories';
 import CategoryTrends from './CategoryTrends';
 import BestSeller from './BestSeller';
+import { useHomepageLayout } from '../utils/MockData';
 import ProductCard from './ProductCard';
 import { generateProducts } from '../utils/MockData';
 
@@ -54,6 +55,7 @@ const categoryProducts = {
 
 
 const CategoryPage = ({ title }) => {
+  const homepageLayout = useHomepageLayout();
   const allProductsDynamic = title === 'All Products' ? generateProducts('All', 100) : null;
   const productsToShow = allProductsDynamic && allProductsDynamic.length > 0 
     ? allProductsDynamic 
@@ -62,7 +64,7 @@ const CategoryPage = ({ title }) => {
   return (
     <div className="content-container" style={{ paddingBottom: '80px', display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 120px)' }}>
       {/* Category Specific Hero Slider */}
-      <HeroSlider category={title} />
+      {homepageLayout.categoryHeroSliders?.[title] !== false && <HeroSlider category={title} />}
       
       {/* Category Sections (Reusing the layout across all categories for now) */}
       <>

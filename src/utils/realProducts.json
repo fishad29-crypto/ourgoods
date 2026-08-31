@@ -1,1 +1,44 @@
-[]
+[
+  {
+    "id": "demo_001",
+    "title": "Wrap Cross Top Long Sleeve Slim Fit",
+    "category": "Women",
+    "price": 25.50,
+    "originalPrice": 40.00,
+    "image": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=90&w=800",
+    "vendor": "OURGOODS DIRECT",
+    "brand": "OURGOODS",
+    "ribbon": "Local",
+    "colors": "Black, White, Maroon, Olive, Navy, Red",
+    "rating": 4.8,
+    "soldCount": 420
+  },
+  {
+    "id": "demo_002",
+    "title": "Luxury Leather Handbag with Gold Chain",
+    "category": "Purse & Bags",
+    "price": 89.99,
+    "originalPrice": 120.00,
+    "image": "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&q=90&w=800",
+    "vendor": "OURGOODS DIRECT",
+    "brand": "OURGOODS",
+    "ribbon": "Choice",
+    "colors": "Black, Brown, Red",
+    "rating": 4.9,
+    "soldCount": 850
+  },
+  {
+    "id": "demo_003",
+    "title": "Wireless Noise-Canceling Earbuds Pro",
+    "category": "Jewelry & Accessories",
+    "price": 45.00,
+    "originalPrice": 65.00,
+    "image": "https://images.unsplash.com/photo-1599643478524-fb66f4568e71?auto=format&fit=crop&q=90&w=800",
+    "vendor": "Global Tech",
+    "brand": "AudioMax",
+    "ribbon": "Global",
+    "colors": "White, Black",
+    "rating": 4.7,
+    "soldCount": 1230
+  }
+]

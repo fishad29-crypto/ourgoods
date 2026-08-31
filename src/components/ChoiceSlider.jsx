@@ -31,7 +31,7 @@ const ChoiceSlider = () => {
       <div className="no-scrollbar" style={{ display: 'flex', overflowX: 'auto', gap: '12px', padding: '0 15px', scrollSnapType: 'x mandatory' }}>
         {products.map(product => (
           <div key={product.id} style={{ minWidth: '150px', maxWidth: '150px', scrollSnapAlign: 'start' }}>
-            <ProductCard product={product} />
+            <ProductCard product={product} showChoiceTag={true} />
           </div>
         ))}
         

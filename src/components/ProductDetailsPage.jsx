@@ -930,17 +930,45 @@ const ProductDetailsPage = () => {
               );
             })()}
 
+            {/* Trust Badges on Main Page */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+              <div 
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', color: '#111', background: '#fdf2f8', padding: '10px 12px', borderRadius: '8px', transition: 'all 0.2s' }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600 }}>
+                  <i className="las la-truck-return" style={{ fontSize: '18px', color: 'var(--brand-pink)' }}></i>
+                  <span>Returns Accepted</span>
+                </div>
+                <i className="las la-angle-right" style={{ fontSize: '12px', color: '#999' }}></i>
+              </div>
+              <div 
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', color: '#111', background: '#f3e5f5', padding: '10px 12px', borderRadius: '8px', transition: 'all 0.2s' }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600 }}>
+                  <i className="las la-shield-alt" style={{ fontSize: '18px', color: '#9c27b0' }}></i>
+                  <span>Safe Payments · Privacy Protection</span>
+                </div>
+                <i className="las la-angle-right" style={{ fontSize: '12px', color: '#999' }}></i>
+              </div>
+            </div>
+
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
               <div 
                 className="clickable-pill"
                 onClick={() => navigate(`/product/${product.id}/reviews`)}
-                style={{ fontSize: '12px', color: '#b97a3a', background: '#fdf6ed', border: '1px solid #f6e6d1', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', flex: '1', justifyContent: 'space-between' }}
+                style={{ fontSize: '12px', color: '#111', background: '#fff4e5', padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s', flex: '1', justifyContent: 'space-between' }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <i className="las la-star" style={{ fontSize: '14px' }}></i>
-                  <span><span style={{ fontWeight: 700 }}>{randomRating}</span> Product Reviews ({randomReviewCount})</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                  <i className="las la-star" style={{ fontSize: '18px', color: '#f57c00' }}></i>
+                  <span><span style={{ fontWeight: 800 }}>{randomRating}</span> Product Reviews ({randomReviewCount})</span>
                 </div>
-                <i className="las la-angle-right" style={{ fontSize: '12px' }}></i>
+                <i className="las la-angle-right" style={{ fontSize: '12px', color: '#999' }}></i>
               </div>
 
               <div 
@@ -949,10 +977,12 @@ const ProductDetailsPage = () => {
                   e.stopPropagation();
                   toggleWishlist(product);
                 }}
-                style={{ fontSize: '12px', color: '#b97a3a', background: '#fdf6ed', border: '1px solid #f6e6d1', padding: '6px 10px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', transition: 'all 0.2s' }}
+                style={{ fontSize: '12px', color: '#111', background: '#fff4e5', padding: '10px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'all 0.2s', flex: '1', justifyContent: 'center' }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
               >
-                <i className={isInWishlist(product.id) ? "las la-heart" : "lar la-heart"} style={{ fontSize: '14px', color: isInWishlist(product.id) ? 'var(--brand-pink)' : '#b97a3a' }}></i> 
-                <span>{randomFavorites}k Favorites</span>
+                <i className="las la-heart" style={{ fontSize: '18px', color: isInWishlist(product.id) ? 'var(--brand-pink)' : '#f57c00' }}></i> 
+                <span style={{ fontWeight: 600 }}>{randomFavorites}k Favorites</span>
               </div>
             </div>
 
@@ -1305,14 +1335,31 @@ const ProductDetailsPage = () => {
                   
                   const isSelected = paymentMode === opt;
                   
+                  const isCod = opt === 'cod' || paymentText.toLowerCase().includes('cash on delivery');
+                  const bgColor = isCod ? '#e8f5e9' : '#e3f2fd';
+                  const textColor = isCod ? '#2e7d32' : '#1976d2';
+                  const borderColor = isSelected ? textColor : 'transparent';
+                  
                   return (
                     <button
                       key={opt}
-                      onClick={() => { setPaymentMode(opt); if (opt !== 'cod') setShowPaymentSetupModal(true); }}
-                      style={{ flex: 1, padding: '10px', border: `2px solid ${isSelected ? '#E91E63' : '#eee'}`, background: isSelected ? '#FFF0F5' : '#fff', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                      onClick={() => { setPaymentMode(opt); if (!isCod) setShowPaymentSetupModal(true); }}
+                      style={{ 
+                        flex: 1, 
+                        padding: '10px 8px', 
+                        border: `1px solid ${borderColor}`, 
+                        background: bgColor, 
+                        borderRadius: '6px', 
+                        cursor: 'pointer', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        gap: '6px',
+                        transition: 'all 0.2s'
+                      }}
                     >
-                      <i className={paymentIcon} style={{ fontSize: '20px', color: isSelected ? '#E91E63' : '#666' }}></i>
-                      <span style={{ fontSize: '14px', fontWeight: isSelected ? 'bold' : 'normal', color: isSelected ? '#E91E63' : '#333' }}>{paymentText}</span>
+                      <i className={paymentIcon} style={{ fontSize: '18px', color: textColor }}></i>
+                      <span style={{ fontSize: '12px', fontWeight: isSelected ? '700' : '600', color: textColor }}>{paymentText}</span>
                     </button>
                   );
                 })}
@@ -1342,8 +1389,23 @@ const ProductDetailsPage = () => {
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <div style={{ color: '#E91E63', fontSize: '24px', fontWeight: 'bold' }}>৳{product.price.toLocaleString()}</div>
-                <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>Please select options</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ color: '#E91E63', fontSize: '24px', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
+                    <span style={{ fontSize: '20px', marginRight: '2px' }}>৳</span>
+                    {product.price.toLocaleString()}
+                  </div>
+                  {product.originalPrice > product.price && (
+                    <div style={{ background: '#f48fb1', color: '#fff', padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>
+                      Saved ৳{(product.originalPrice - product.price).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+                {product.originalPrice > product.price && (
+                  <div style={{ fontSize: '14px', color: '#888', textDecoration: 'line-through', marginTop: '-4px' }}>
+                    ৳{product.originalPrice.toLocaleString()}
+                  </div>
+                )}
+                <div style={{ fontSize: '13px', color: '#666', marginTop: product.originalPrice > product.price ? '2px' : '4px' }}>Please select options</div>
               </div>
             </div>
 
@@ -1352,7 +1414,9 @@ const ProductDetailsPage = () => {
               {/* Attributes */}
               {productAttributes.map((attr, idx) => (
                 <div key={idx} style={{ marginBottom: '24px' }}>
-                  <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#333' }}>{attr.name}</h4>
+                  <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', marginBottom: '12px', gap: '16px' }}>
+                    <h4 style={{ margin: 0, fontSize: '15px', color: '#111', fontWeight: 800 }}>{attr.name}</h4>
+                  </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
                     {attr.options.map(option => (
                       <div 
@@ -1407,8 +1471,67 @@ const ProductDetailsPage = () => {
                       </div>
                     ))}
                   </div>
+                  {attr.name.toLowerCase() === 'size' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: '#333', fontWeight: 600, marginTop: '12px' }}>
+                      <div 
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'color 0.2s' }}
+                        onMouseOver={(e) => e.currentTarget.style.color = '#E91E63'}
+                        onMouseOut={(e) => e.currentTarget.style.color = '#333'}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E91E63" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 21H3V3" />
+                          <path d="M7 21V17" />
+                          <path d="M11 21V17" />
+                          <path d="M15 21V17" />
+                          <path d="M19 21V17" />
+                          <path d="M3 7H7" />
+                          <path d="M3 11H7" />
+                          <path d="M3 15H7" />
+                        </svg>
+                        <span>Size Guide</span>
+                        <i className="las la-angle-right" style={{ fontSize: '10px', color: '#999' }}></i>
+                      </div>
+                      <span style={{ color: '#eaeaea' }}>|</span>
+                      <div 
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: 'color 0.2s' }}
+                        onMouseOver={(e) => e.currentTarget.style.color = '#E91E63'}
+                        onMouseOut={(e) => e.currentTarget.style.color = '#333'}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#E91E63" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21.17 6.81a1 1 0 0 0-3.98-3.98L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z" />
+                          <path d="m15 5 4 4" />
+                        </svg>
+                        <span>Check My Size</span>
+                        <i className="las la-angle-right" style={{ fontSize: '10px', color: '#999' }}></i>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
+
+              {/* Combo Offer in SKU Modal */}
+              {product.enableComboOffer && product.comboTiers?.length > 0 && (
+                <div className="pdp-combo-card" style={{ marginBottom: '20px', background: '#fff0f6', borderRadius: '12px', border: '1px solid #fbcfe8', padding: '16px', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: 0, right: 0, background: '#E43292', color: '#fff', fontSize: '10px', fontWeight: 'bold', padding: '4px 12px', borderBottomLeftRadius: '12px' }}>
+                    COMBO OFFER
+                  </div>
+
+                  {product.comboTiers && product.comboTiers.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {product.comboTiers.map((tier, idx) => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '10px 12px', borderRadius: '8px', border: '1px dashed #fbcfe8', cursor: 'pointer', transition: 'all 0.2s', boxShadow: skuQuantity >= tier.minQty ? '0 0 0 2px #E43292' : 'none' }} onClick={() => setSkuQuantity(Number(tier.minQty))}>
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                            Buy {tier.minQty} or more items
+                          </span>
+                          <span style={{ fontSize: '14px', fontWeight: 700, color: '#E43292', background: '#fdf2f8', padding: '4px 8px', borderRadius: '6px' }}>
+                            Get {tier.discountType === 'percentage' ? `${tier.discountValue}% OFF` : tier.discountType === 'fixed' ? `৳${tier.discountValue} OFF` : 'FREE SHIPPING'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Quantity */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '24px', gap: '12px' }}>

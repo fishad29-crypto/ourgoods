@@ -468,3 +468,21 @@ button {
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
+
+/* Product Description HTML Content Styles */
+.product-description-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 8px 0;
+  display: block;
+}
+
+.product-description-content video,
+.product-description-content iframe {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 8px 0;
+  display: block;
+}

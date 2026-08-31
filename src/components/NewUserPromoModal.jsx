@@ -28,10 +28,9 @@ const NewUserPromoModal = ({ onClose }) => {
     return () => clearInterval(timer);
   }, []);
 
-  const coupons = [
-    { discount: '30%', minOrder: 'Orders $15+', cap: 'Capped at $23' },
-    { discount: '25%', minOrder: 'Orders $75+', cap: 'Capped at $30' },
-    { discount: '20%', minOrder: 'Orders $100+', cap: 'Capped at $40' }
+  const deals = [
+    { type: 'Shipping', title: 'Free Shipping', desc: 'On your first order' },
+    { type: 'Return', title: 'Free Return', desc: 'Within 90 days of delivery' }
   ];
 
   return (
@@ -107,7 +106,7 @@ const NewUserPromoModal = ({ onClose }) => {
         </h2>
 
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {coupons.map((c, i) => (
+          {deals.map((d, i) => (
             <div key={i} style={{
               position: 'relative',
               display: 'flex',
@@ -131,7 +130,7 @@ const NewUserPromoModal = ({ onClose }) => {
                 New User
               </div>
 
-              {/* Left Side (Discount) */}
+              {/* Left Side (Type) */}
               <div style={{
                 flex: '0 0 40%',
                 borderRight: '1px dashed #fcd8b8',
@@ -142,9 +141,9 @@ const NewUserPromoModal = ({ onClose }) => {
                 padding: '20px 10px'
               }}>
                 <div style={{ color: '#ff4d4f', fontWeight: 900, fontSize: '28px', lineHeight: 1, display: 'flex', alignItems: 'baseline' }}>
-                  {c.discount.split('%')[0]}<span style={{ fontSize: '14px' }}>%OFF</span>
+                  FREE
                 </div>
-                <div style={{ color: '#888', fontSize: '12px', marginTop: '4px' }}>{c.minOrder}</div>
+                <div style={{ color: '#ff4d4f', fontSize: '14px', marginTop: '4px', fontWeight: 'bold', textTransform: 'uppercase' }}>{d.type}</div>
               </div>
 
               {/* Right Side (Details) */}
@@ -155,13 +154,10 @@ const NewUserPromoModal = ({ onClose }) => {
                 flexDirection: 'column',
                 justifyContent: 'center'
               }}>
-                <div style={{ color: '#ff4d4f', fontWeight: 'bold', fontSize: '16px', marginBottom: '2px' }}>
-                  Sitewide Coupon
+                <div style={{ color: '#ff4d4f', fontWeight: 'bold', fontSize: '18px', marginBottom: '8px' }}>
+                  {d.title}
                 </div>
-                <div style={{ color: '#666', fontSize: '12px', marginBottom: '6px' }}>
-                  {c.cap}
-                </div>
-                <div style={{ color: '#888', fontSize: '11px' }}>
+                <div style={{ color: '#888', fontSize: '12px' }}>
                   Expires in {timeLeft}
                 </div>
               </div>

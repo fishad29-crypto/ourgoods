@@ -12,7 +12,7 @@ import ReviewPage from './components/ReviewPage';
 import MessagePage from './components/MessagePage';
 import ProfilePage from './components/ProfilePage';
 import NewUserPromoModal from './components/NewUserPromoModal';
-import { useCategories } from './utils/MockData';
+import { useCategories, useHomepageLayout } from './utils/MockData';
 
 const searchSuggestions = [
   "summer dresses",
@@ -33,8 +33,21 @@ function CustomerApp() {
   const { cartCount, cartTotal } = useCart();
   const { wishlistCount } = useWishlist();
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState(0);
-  const [activeNav, setActiveNav] = useState('Home');
+  const [activeTab, setActiveTab] = useState(() => {
+    return parseInt(sessionStorage.getItem('customerAppActiveTab') || '0');
+  });
+  const [activeNav, setActiveNav] = useState(() => {
+    return sessionStorage.getItem('customerAppActiveNav') || 'Home';
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem('customerAppActiveTab', activeTab.toString());
+  }, [activeTab]);
+
+  useEffect(() => {
+    sessionStorage.setItem('customerAppActiveNav', activeNav);
+  }, [activeNav]);
+
   const [hideBottomNav, setHideBottomNav] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
   const [showPromoModal, setShowPromoModal] = useState(() => {
@@ -44,9 +57,9 @@ function CustomerApp() {
   const [userCity, setUserCity] = useState(() => {
     return localStorage.getItem('userCity') || null;
   });
-
   const [showDailyDiscoverTabs, setShowDailyDiscoverTabs] = useState(false);
   const [dailyDiscoverActiveTab, setDailyDiscoverActiveTab] = useState('All Products');
+  const homepageLayout = useHomepageLayout();
 
   useEffect(() => {
     const handleDailyDiscoverSticky = (e) => {
@@ -447,15 +460,20 @@ function CustomerApp() {
             {showDailyDiscoverTabs ? (
               <div id="daily-discover-scroll" className="no-scrollbar" style={{ flex: 1, display: 'flex', overflowX: 'auto', alignItems: 'center', padding: '0 15px', scrollBehavior: 'smooth' }}>
                 <div style={{ display: 'flex', border: '1px solid #eaeaea', borderRadius: '6px', background: '#f5f5f5', minWidth: 'max-content', alignItems: 'stretch' }}>
-                  {[
-                    { label: 'All Products', icon: <i className="las la-shopping-bag" style={{ fontSize: '16px', color: 'var(--brand-pink)' }}></i> },
-                    { label: 'Combo & Choice', icon: <i className="las la-gift" style={{ fontSize: '18px', color: 'var(--brand-pink)' }}></i> },
-                    { label: 'Cash on Delivery', icon: <i className="las la-money-bill-wave" style={{ fontSize: '16px' }}></i> },
-                    { label: 'New Arrival', icon: <i className="las la-star" style={{ fontSize: '16px' }}></i> },
-                    { label: 'Flash Sale', icon: <i className="las la-bolt" style={{ fontSize: '16px' }}></i> },
-                    { label: 'Global Shop', icon: <i className="las la-globe" style={{ fontSize: '16px' }}></i> },
-                    { label: 'Factory Direct', icon: <i className="las la-industry" style={{ fontSize: '16px' }}></i> }
-                  ].map((tab, idx, arr) => (
+                  {(homepageLayout.tabs || [])
+                    .filter(t => t.visible !== false)
+                    .map(t => {
+                      const icons = {
+                        'All Products': <i className="las la-shopping-bag" style={{ fontSize: '16px', color: 'var(--brand-pink)' }}></i>,
+                        '24h Delivery': <i className="las la-clock" style={{ fontSize: '18px', color: '#333' }}></i>,
+                        'Free Shipping': <i className="las la-truck" style={{ fontSize: '18px', color: '#047857' }}></i>,
+                        'Choice': <i className="las la-check-circle" style={{ fontSize: '16px', color: '#3b82f6' }}></i>,
+                        'Combo Offer': <i className="las la-boxes" style={{ fontSize: '16px', color: '#eab308' }}></i>,
+                        'Cash on Delivery': <i className="las la-money-bill-wave" style={{ fontSize: '16px', color: '#10b981' }}></i>
+                      };
+                      return { label: t.label, icon: icons[t.label] };
+                    })
+                    .map((tab, idx, arr) => (
                     <div 
                       key={idx} 
                       ref={el => dailyDiscoverTabRefs.current[tab.label] = el}

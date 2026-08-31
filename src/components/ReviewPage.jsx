@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const reviewsData = [
   {
@@ -184,6 +184,60 @@ const reviewsData = [
 ];
 
 const ReviewPage = ({ onClose }) => {
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [touchStartX, setTouchStartX] = useState(null);
+
+  // Pre-calculate a flat list of all images and a map for easy lookup
+  const allImages = React.useMemo(() => {
+    const list = [];
+    reviewsData.forEach(review => {
+      if (review.images) {
+        review.images.forEach(img => list.push(img));
+      }
+    });
+    return list;
+  }, []);
+
+  const handlePrev = (e) => {
+    if (e) e.stopPropagation();
+    setLightboxIndex((prev) => (prev > 0 ? prev - 1 : allImages.length - 1));
+  };
+
+  const handleNext = (e) => {
+    if (e) e.stopPropagation();
+    setLightboxIndex((prev) => (prev < allImages.length - 1 ? prev + 1 : 0));
+  };
+
+  const handleTouchStart = (e) => {
+    setTouchStartX(e.touches[0].clientX);
+  };
+  
+  const handleTouchEnd = (e) => {
+    if (touchStartX === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX - touchEndX;
+    if (diff > 50) {
+      handleNext();
+    } else if (diff < -50) {
+      handlePrev();
+    }
+    setTouchStartX(null);
+  };
+
+  // Helper to find global index
+  const getGlobalIndex = (reviewId, localIdx) => {
+    let currentGlobal = 0;
+    for (let i = 0; i < reviewsData.length; i++) {
+      if (reviewsData[i].id === reviewId) {
+        return currentGlobal + localIdx;
+      }
+      if (reviewsData[i].images) {
+        currentGlobal += reviewsData[i].images.length;
+      }
+    }
+    return 0;
+  };
+
   return (
     <div style={{ height: 'calc(100vh - 60px)', background: '#f5f5f5', display: 'flex', flexDirection: 'column' }}>
       <div className="content-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: '#fff' }}>
@@ -262,11 +316,15 @@ const ReviewPage = ({ onClose }) => {
                 {/* Review Images */}
                 {review.images && review.images.length > 0 && (
                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 'auto' }}>
-                      {review.images.map((img, idx) => (
-                         <div key={idx} style={{ width: '45px', height: '45px', borderRadius: '6px', overflow: 'hidden', border: '1px solid #eaeaea' }}>
+                       {review.images.map((img, idx) => (
+                         <div 
+                           key={idx} 
+                           onClick={() => setLightboxIndex(getGlobalIndex(review.id, idx))}
+                           style={{ width: '45px', height: '45px', borderRadius: '6px', overflow: 'hidden', border: '1px solid #eaeaea', cursor: 'pointer' }}
+                         >
                             <img src={img} alt="Review" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                          </div>
-                      ))}
+                       ))}
                    </div>
                 )}
               </div>
@@ -275,6 +333,51 @@ const ReviewPage = ({ onClose }) => {
 
         </div>
       </div>
+
+      {/* Lightbox Overlay */}
+      {lightboxIndex !== null && (
+        <div 
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.95)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setLightboxIndex(null)}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()} 
+            style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+          >
+            <button 
+              onClick={() => setLightboxIndex(null)} 
+              style={{ position: 'absolute', top: '20px', right: '20px', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <i className="las la-times" style={{ fontSize: '24px' }}></i>
+            </button>
+            
+            {allImages.length > 1 && (
+              <>
+                <button onClick={handlePrev} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <i className="las la-angle-left" style={{ fontSize: '24px' }}></i>
+                </button>
+                <button onClick={handleNext} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <i className="las la-angle-right" style={{ fontSize: '24px' }}></i>
+                </button>
+              </>
+            )}
+
+            <img 
+              src={allImages[lightboxIndex]} 
+              alt="Review Full" 
+              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', userSelect: 'none' }} 
+            />
+            
+            {allImages.length > 1 && (
+              <div style={{ position: 'absolute', bottom: '20px', color: '#fff', fontSize: '14px', background: 'rgba(0,0,0,0.5)', padding: '6px 16px', borderRadius: '20px', fontWeight: '500', letterSpacing: '1px' }}>
+                {lightboxIndex + 1} / {allImages.length}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

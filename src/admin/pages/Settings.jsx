@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
-import { Settings as SettingsIcon, Store, CreditCard, Truck, Bell, Link as LinkIcon, ShieldCheck, Database, Layout } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Settings as SettingsIcon, Store, CreditCard, Truck, Bell, Link as LinkIcon, ShieldCheck, Database, Layout, Activity, Save } from 'lucide-react';
 import '../admin.css';
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('General');
+  const [metaPixelId, setMetaPixelId] = useState(localStorage.getItem('metaPixelId') || '');
+  const [googleAdsId, setGoogleAdsId] = useState(localStorage.getItem('googleAdsId') || '');
+  const [saveMessage, setSaveMessage] = useState('');
 
   const tabs = [
     { id: 'General', icon: <Store size={18} /> },
@@ -12,7 +15,17 @@ const Settings = () => {
     { id: 'Notifications', icon: <Bell size={18} /> },
     { id: 'Social Links', icon: <LinkIcon size={18} /> },
     { id: 'Security', icon: <ShieldCheck size={18} /> },
+    { id: 'Analytics', icon: <Activity size={18} /> },
   ];
+
+  const handleSaveAnalytics = () => {
+    localStorage.setItem('metaPixelId', metaPixelId);
+    localStorage.setItem('googleAdsId', googleAdsId);
+    setSaveMessage('Analytics IDs saved successfully! Reloading...');
+    setTimeout(() => {
+      window.location.reload();
+    }, 1500);
+  };
 
   return (
     <div className="admin-content">
@@ -21,9 +34,13 @@ const Settings = () => {
           <h2 className="page-title">Store Settings</h2>
           <p style={{ color: '#64748b', fontSize: '14px', marginTop: '4px' }}>Configure your store, payments, shipping, and core preferences.</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 24px', background: 'var(--brand-pink)', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#fff', fontSize: '14px', fontWeight: 600 }}>
-            Save Changes
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {saveMessage && <span style={{ fontSize: '13px', color: '#10b981', fontWeight: 500 }}>{saveMessage}</span>}
+          <button 
+            onClick={activeTab === 'Analytics' ? handleSaveAnalytics : undefined}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 24px', background: 'var(--brand-pink)', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#fff', fontSize: '14px', fontWeight: 600 }}
+          >
+            <Save size={16} /> Save Changes
           </button>
         </div>
       </div>
@@ -136,7 +153,60 @@ const Settings = () => {
             </div>
           )}
           
-          {(activeTab !== 'General' && activeTab !== 'Payments') && (
+          {activeTab === 'Analytics' && (
+            <div>
+              <h3 style={{ margin: '0 0 24px 0', fontSize: '18px', fontWeight: 600, color: '#0f172a' }}>Analytics & Tracking</h3>
+              <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '24px' }}>Configure your third-party tracking pixels. Leave blank to disable.</p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                    <div style={{ width: '40px', height: '40px', background: '#e0f2fe', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0284c7' }}>
+                      <Activity size={20} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a' }}>Meta Pixel (Facebook)</div>
+                      <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>Track conversions and page views from Facebook Ads</div>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Meta Pixel ID</label>
+                    <input 
+                      type="text" 
+                      value={metaPixelId}
+                      onChange={(e) => setMetaPixelId(e.target.value)}
+                      placeholder="e.g. 123456789012345" 
+                      style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px' }} 
+                    />
+                  </div>
+                </div>
+
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                    <div style={{ width: '40px', height: '40px', background: '#fef3c7', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
+                      <Activity size={20} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a' }}>Google Ads (gtag.js)</div>
+                      <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>Track Google Ads performance and conversions</div>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#475569', marginBottom: '8px' }}>Google Ads Measurement ID</label>
+                    <input 
+                      type="text" 
+                      value={googleAdsId}
+                      onChange={(e) => setGoogleAdsId(e.target.value)}
+                      placeholder="e.g. AW-987654321" 
+                      style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px' }} 
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {(activeTab !== 'General' && activeTab !== 'Payments' && activeTab !== 'Analytics') && (
             <div style={{ textAlign: 'center', padding: '40px' }}>
               <SettingsIcon size={48} color="#cbd5e1" style={{ marginBottom: '16px' }} />
               <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 600, color: '#0f172a' }}>{activeTab} Settings</h3>

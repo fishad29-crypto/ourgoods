@@ -12,6 +12,46 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#E43292" />
     <title>OURGOODS</title>
+
+    <!-- Dynamic Analytics Injection -->
+    <script>
+      (function() {
+        const metaPixelId = localStorage.getItem('metaPixelId');
+        if (metaPixelId) {
+          !function(f,b,e,v,n,t,s)
+          {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+          n.queue=[];t=b.createElement(e);t.async=!0;
+          t.src=v;s=b.getElementsByTagName(e)[0];
+          s.parentNode.insertBefore(t,s)}(window, document,'script',
+          'https://connect.facebook.net/en_US/fbevents.js');
+          fbq('init', metaPixelId);
+          fbq('track', 'PageView');
+          
+          const noscript = document.createElement('noscript');
+          const img = document.createElement('img');
+          img.height = 1; img.width = 1; img.style.display = 'none';
+          img.src = 'https://www.facebook.com/tr?id=' + metaPixelId + '&ev=PageView&noscript=1';
+          noscript.appendChild(img);
+          document.head.appendChild(noscript);
+        }
+
+        const googleAdsId = localStorage.getItem('googleAdsId');
+        if (googleAdsId) {
+          const gtagScript = document.createElement('script');
+          gtagScript.async = true;
+          gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=' + googleAdsId;
+          document.head.appendChild(gtagScript);
+
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', googleAdsId);
+        }
+      })();
+    </script>
+    <!-- End Dynamic Analytics Injection -->
   </head>
   <body>
     <div id="root"></div>

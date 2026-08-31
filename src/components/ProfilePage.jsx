@@ -1,77 +1,247 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import CreditRewardBanner from './CreditRewardBanner';
+import { setupRecaptcha, sendOTP, verifyOTP, loginWithGoogle, loginWithFacebook, logoutUser } from '../services/firebase';
+import { useAuth } from '../context/AuthContext';
 
 const ProfilePage = () => {
+  const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [view, setView] = useState('main'); // 'main', 'login', 'register'
+  const [view, setView] = useState('main'); // 'main', 'auth', 'otp'
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [timer, setTimer] = useState(60);
+  const [canResend, setCanResend] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  
+  const { currentUser } = useAuth();
 
-  // Dummy functions
-  const handleLogin = (e) => {
+  React.useEffect(() => {
+    // If we have a global logged-in user from Firebase, reflect it in the UI
+    if (currentUser) {
+      setIsLoggedIn(true);
+      setView('main');
+    } else {
+      setIsLoggedIn(false);
+    }
+  }, [currentUser]);
+
+  React.useEffect(() => {
+    let interval;
+    if (view === 'otp' && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+    } else if (timer === 0) {
+      setCanResend(true);
+    }
+    return () => clearInterval(interval);
+  }, [view, timer]);
+
+  // Real Firebase Phone Auth Functions
+  const handleSendOtp = async (e) => {
+    if (e) e.preventDefault();
+    if (phoneNumber.length >= 10) {
+      setErrorMsg('');
+      setLoading(true);
+      try {
+        // Initialize recaptcha if it hasn't been already
+        setupRecaptcha('recaptcha-container');
+        const formattedNumber = `+880${phoneNumber}`;
+        
+        // Actually send the SMS via Firebase
+        await sendOTP(formattedNumber, window.recaptchaVerifier);
+        
+        setView('otp');
+        setTimer(60);
+        setCanResend(false);
+      } catch (error) {
+        console.error("Error sending OTP", error);
+        setErrorMsg('Failed to send SMS. Make sure Firebase keys are in .env');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    setIsLoggedIn(true);
-    setView('main');
+    const otpCode = otp.join('');
+    if (otpCode.length === 6) {
+      setErrorMsg('');
+      setLoading(true);
+      try {
+        await verifyOTP(otpCode);
+        // On success, the AuthContext will automatically update currentUser and trigger the useEffect above
+      } catch (error) {
+        console.error("Invalid OTP", error);
+        setErrorMsg('Invalid OTP code. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
-  const handleRegister = (e) => {
-    e.preventDefault();
-    setIsLoggedIn(true);
-    setView('main');
+  const handleSocialLogin = async (provider) => {
+    try {
+      if (provider === 'google') await loginWithGoogle();
+      if (provider === 'facebook') await loginWithFacebook();
+    } catch (error) {
+      console.error(`Error with ${provider} login`, error);
+      setErrorMsg(`Failed to login with ${provider}`);
+    }
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      setIsLoggedIn(false);
+    } catch (error) {
+      console.error("Error logging out", error);
+    }
   };
 
-  if (view === 'login' || view === 'register') {
+  const handleOtpChange = (element, index) => {
+    if (isNaN(element.value)) return false;
+    const newOtp = [...otp];
+    newOtp[index] = element.value;
+    setOtp(newOtp);
+    // Focus next input
+    if (element.nextSibling && element.value !== '') {
+      element.nextSibling.focus();
+    }
+  };
+
+  if (view === 'auth') {
     return (
       <div style={{ padding: '20px', background: '#fff', height: '100%', display: 'flex', flexDirection: 'column' }}>
         <i className="las la-arrow-left" style={{ fontSize: '24px', cursor: 'pointer', marginBottom: '30px' }} onClick={() => setView('main')}></i>
         
-        <h2 style={{ fontSize: '24px', marginBottom: '5px' }}>
-          {view === 'login' ? 'Welcome Back!' : 'Create an Account'}
-        </h2>
-        <p style={{ color: '#888', marginBottom: '30px', fontSize: '14px' }}>
-          {view === 'login' ? 'Login to continue shopping and track orders.' : 'Join Ourgoods for exclusive deals and combo offers.'}
+        <h2 style={{ fontSize: '24px', marginBottom: '5px', fontWeight: 800 }}>Welcome to Ourgoods</h2>
+        <p style={{ color: '#888', marginBottom: '20px', fontSize: '14px' }}>
+          Enter your mobile number to log in or register.
         </p>
+        
+        {errorMsg && (
+          <div style={{ background: '#ffeeee', color: '#e74c3c', padding: '10px', borderRadius: '8px', fontSize: '13px', marginBottom: '20px' }}>
+            {errorMsg}
+          </div>
+        )}
 
-        <form onSubmit={view === 'login' ? handleLogin : handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          {view === 'register' && (
+        <form onSubmit={handleSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #eaeaea', borderRadius: '8px', padding: '5px 15px', background: '#fcfcfc', transition: 'border 0.2s' }}>
+            <span style={{ fontWeight: 600, color: '#333', borderRight: '1px solid #eaeaea', paddingRight: '10px', marginRight: '10px' }}>+880</span>
             <input 
-              type="text" 
-              placeholder="Full Name" 
+              type="tel" 
+              placeholder="1XXXXXXXXX" 
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
               required
-              style={{ padding: '15px', borderRadius: '8px', border: '1px solid #eaeaea', fontSize: '14px', outline: 'none' }}
+              maxLength="10"
+              style={{ flex: 1, padding: '10px 0', border: 'none', background: 'transparent', fontSize: '16px', outline: 'none' }}
             />
-          )}
-          <input 
-            type="email" 
-            placeholder="Email Address" 
-            required
-            style={{ padding: '15px', borderRadius: '8px', border: '1px solid #eaeaea', fontSize: '14px', outline: 'none' }}
-          />
-          <input 
-            type="password" 
-            placeholder="Password" 
-            required
-            style={{ padding: '15px', borderRadius: '8px', border: '1px solid #eaeaea', fontSize: '14px', outline: 'none' }}
-          />
+          </div>
           
-          <button type="submit" style={{ 
+          {/* This empty div is required by Firebase for the invisible reCAPTCHA */}
+          <div id="recaptcha-container"></div>
+          
+          <button type="submit" disabled={loading} style={{ 
             background: 'var(--brand-pink)', color: '#fff', border: 'none', padding: '15px', borderRadius: '8px', 
-            fontSize: '16px', fontWeight: 600, marginTop: '10px', cursor: 'pointer' 
+            fontSize: '16px', fontWeight: 600, marginTop: '10px', cursor: loading ? 'not-allowed' : 'pointer',
+            transition: 'background-color 0.2s', opacity: loading ? 0.7 : 1
           }}>
-            {view === 'login' ? 'Log In' : 'Register'}
+            {loading ? 'Sending...' : 'Continue'}
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '14px', color: '#555' }}>
-          {view === 'login' ? "Don't have an account? " : "Already have an account? "}
-          <span 
-            onClick={() => setView(view === 'login' ? 'register' : 'login')}
-            style={{ color: 'var(--brand-pink)', fontWeight: 600, cursor: 'pointer' }}
-          >
-            {view === 'login' ? 'Register' : 'Log In'}
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', margin: '30px 0' }}>
+          <div style={{ flex: 1, height: '1px', background: '#eaeaea' }}></div>
+          <span style={{ padding: '0 15px', color: '#888', fontSize: '12px', fontWeight: 600 }}>OR</span>
+          <div style={{ flex: 1, height: '1px', background: '#eaeaea' }}></div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          <button onClick={() => handleSocialLogin('google')} style={{ 
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+            background: '#fff', color: '#333', border: '1px solid #eaeaea', padding: '14px', borderRadius: '8px', 
+            fontSize: '14px', fontWeight: 600, cursor: 'pointer', transition: 'background-color 0.2s'
+          }}>
+            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" style={{ width: '20px', height: '20px' }} />
+            Continue with Google
+          </button>
+          
+          <button onClick={() => handleSocialLogin('facebook')} style={{ 
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+            background: '#1877F2', color: '#fff', border: 'none', padding: '14px', borderRadius: '8px', 
+            fontSize: '14px', fontWeight: 600, cursor: 'pointer', transition: 'background-color 0.2s'
+          }}>
+            <img src="https://www.svgrepo.com/show/475647/facebook-color.svg" alt="Facebook" style={{ width: '20px', height: '20px', filter: 'brightness(0) invert(1)' }} />
+            Continue with Facebook
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === 'otp') {
+    return (
+      <div style={{ padding: '20px', background: '#fff', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <i className="las la-arrow-left" style={{ fontSize: '24px', cursor: 'pointer', marginBottom: '30px' }} onClick={() => setView('auth')}></i>
+        
+        <h2 style={{ fontSize: '24px', marginBottom: '5px', fontWeight: 800 }}>Verify Mobile</h2>
+        <p style={{ color: '#888', marginBottom: '20px', fontSize: '14px' }}>
+          We've sent a 6-digit code to <strong>+880 {phoneNumber}</strong>
+        </p>
+
+        {errorMsg && (
+          <div style={{ background: '#ffeeee', color: '#e74c3c', padding: '10px', borderRadius: '8px', fontSize: '13px', marginBottom: '20px' }}>
+            {errorMsg}
+          </div>
+        )}
+
+        <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+            {otp.map((data, index) => {
+              return (
+                <input
+                  key={index}
+                  type="text"
+                  maxLength="1"
+                  value={data}
+                  onChange={(e) => handleOtpChange(e.target, index)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Backspace' && !data && e.target.previousSibling) {
+                      e.target.previousSibling.focus();
+                    }
+                  }}
+                  style={{
+                    width: '45px', height: '50px', textAlign: 'center', fontSize: '20px', fontWeight: 700,
+                    border: '1px solid #eaeaea', borderRadius: '8px', background: '#fcfcfc', outline: 'none'
+                  }}
+                  onFocus={(e) => e.target.style.border = '1px solid var(--brand-pink)'}
+                  onBlur={(e) => e.target.style.border = '1px solid #eaeaea'}
+                />
+              );
+            })}
+          </div>
+          
+          <button type="submit" disabled={loading} style={{ 
+            background: 'var(--brand-pink)', color: '#fff', border: 'none', padding: '15px', borderRadius: '8px', 
+            fontSize: '16px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer',
+            transition: 'background-color 0.2s',
+            opacity: (otp.join('').length === 6 && !loading) ? 1 : 0.7
+          }}>
+            {loading ? 'Verifying...' : 'Verify & Proceed'}
+          </button>
+        </form>
+
+        <div style={{ textAlign: 'center', marginTop: '30px', fontSize: '14px', color: '#555' }}>
+          {timer > 0 ? (
+            <span>Code expires in <strong style={{ color: 'var(--brand-pink)' }}>00:{timer.toString().padStart(2, '0')}</strong></span>
+          ) : (
+            <span>Didn't receive the code? <span onClick={handleSendOtp} style={{ color: 'var(--brand-pink)', fontWeight: 600, cursor: 'pointer' }}>Resend</span></span>
+          )}
         </div>
       </div>
     );
@@ -119,10 +289,10 @@ const ProfilePage = () => {
       {!isLoggedIn && (
         <div style={{ padding: '0 20px 20px', position: 'relative', zIndex: 2 }}>
           <div style={{ background: '#fff', padding: '20px', borderRadius: '16px', display: 'flex', gap: '15px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
-            <button onClick={() => setView('login')} style={{ flex: 1, background: '#111', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={() => setView('auth')} style={{ flex: 1, background: '#111', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>
               Log In
             </button>
-            <button onClick={() => setView('register')} style={{ flex: 1, background: '#fff', color: 'var(--brand-pink)', border: '1px solid var(--brand-pink)', padding: '12px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={() => setView('auth')} style={{ flex: 1, background: '#fff', color: 'var(--brand-pink)', border: '1px solid var(--brand-pink)', padding: '12px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>
               Register
             </button>
           </div>
@@ -202,13 +372,15 @@ const ProfilePage = () => {
         {/* Tools and Settings */}
         <div style={{ background: '#fff', borderRadius: '16px', padding: '5px 15px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
           {[
-            { icon: 'la-map-marker-alt', label: 'Shipping Addresses', color: '#1da1f2' },
-            { icon: 'la-heart', label: 'My Wishlist', color: 'var(--brand-pink)' },
-            { icon: 'la-history', label: 'Recently Viewed', color: '#8e44ad' },
-            { icon: 'la-headset', label: 'Help Center', color: '#00D166' },
-            { icon: 'la-cog', label: 'Settings', color: '#555' }
+            { icon: 'la-map-marker-alt', label: 'Shipping Addresses', color: '#1da1f2', action: () => navigate('/addresses') },
+            { icon: 'la-heart', label: 'My Wishlist', color: 'var(--brand-pink)', action: () => navigate('/wishlist') },
+            { icon: 'la-history', label: 'Recently Viewed', color: '#8e44ad', action: () => navigate('/recently-viewed') },
+            { icon: 'la-headset', label: 'Help Center', color: '#00D166', action: () => navigate('/help') },
+            { icon: 'la-cog', label: 'Settings', color: '#555', action: () => navigate('/settings') }
           ].map((item, idx, arr) => (
-            <div key={idx} style={{ 
+            <div key={idx} 
+              onClick={item.action}
+              style={{ 
               display: 'flex', alignItems: 'center', padding: '15px 0', 
               borderBottom: idx !== arr.length - 1 ? '1px solid #f5f5f5' : 'none',
               cursor: 'pointer'

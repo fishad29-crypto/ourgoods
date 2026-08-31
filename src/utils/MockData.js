@@ -241,9 +241,9 @@ export const addProductToFrontend = (productData) => {
   let existingIndex = -1;
   if (productData.originalId) {
     // Exact match for the original product being edited, even if SKU changed
-    existingIndex = globalProductsCache.findIndex(p => p.id === productData.originalId || p.sku === productData.originalId);
+    existingIndex = globalProductsCache.findIndex(p => String(p.id) === String(productData.originalId) || String(p.sku) === String(productData.originalId));
   } else {
-    existingIndex = globalProductsCache.findIndex(p => p.id === newProduct.id || (p.sku && p.sku === newProduct.sku));
+    existingIndex = globalProductsCache.findIndex(p => String(p.id) === String(newProduct.id) || (p.sku && String(p.sku) === String(newProduct.sku)));
   }
   
   if (existingIndex !== -1) {
@@ -267,7 +267,7 @@ export const addProductToFrontend = (productData) => {
 
 export const updateProduct = (productId, updates) => {
   if (!globalProductsCache) getAllProducts();
-  const index = globalProductsCache.findIndex(p => p.id === productId || p.sku === productId);
+  const index = globalProductsCache.findIndex(p => String(p.id) === String(productId) || String(p.sku) === String(productId));
   if (index !== -1) {
     globalProductsCache[index] = { ...globalProductsCache[index], ...updates };
     try {
@@ -280,14 +280,14 @@ export const updateProduct = (productId, updates) => {
 
 export const deleteProduct = (productId) => {
   if (globalProductsCache) {
-    globalProductsCache = globalProductsCache.filter(p => p.id !== productId && p.sku !== productId);
+    globalProductsCache = globalProductsCache.filter(p => String(p.id) !== String(productId) && String(p.sku) !== String(productId));
     localStorage.setItem('userProductsCache', JSON.stringify(globalProductsCache));
   }
 };
 
 export const getProductById = (productId) => {
   if (!globalProductsCache) getAllProducts();
-  return globalProductsCache.find(p => p.id === productId || p.sku === productId) || null;
+  return globalProductsCache.find(p => String(p.id) === String(productId) || String(p.sku) === String(productId)) || null;
 };
 
 import { useState, useEffect } from 'react';
@@ -494,10 +494,10 @@ export const useCategories = () => {
 
 // VENDOR DATA
 const defaultVendors = [
-  { id: 'v1', name: 'Ourgoods Direct', contactName: 'System Admin', email: 'admin@ourgoods.com', phone: '+1234567890', status: 'Active', commission: 0, joinedAt: '2023-01-15', revenue: 45000, productsCount: 120 },
-  { id: 'v2', name: 'TechHaven Electronics', contactName: 'John Doe', email: 'john@techhaven.com', phone: '+1987654321', status: 'Active', commission: 15, joinedAt: '2023-03-22', revenue: 12500, productsCount: 45 },
-  { id: 'v3', name: 'StyleBoutique', contactName: 'Jane Smith', email: 'jane@styleboutique.com', phone: '+1555666777', status: 'Pending', commission: 18, joinedAt: '2023-11-05', revenue: 0, productsCount: 0 },
-  { id: 'v4', name: 'HomeEssentials', contactName: 'Robert Johnson', email: 'robert@homeessentials.com', phone: '+1444555666', status: 'Suspended', commission: 12, joinedAt: '2023-06-10', revenue: 8400, productsCount: 30 }
+  { id: 'v1', name: 'Ourgoods Direct', contactName: 'System Admin', email: 'admin@ourgoods.com', phone: '+1234567890', status: 'Active', commission: 0, joinedAt: '2023-01-15', revenue: 45000, productsCount: 120, tier: 'Official', rating: 4.9, location: 'Dhaka, Bangladesh', fulfillmentRate: 99, recentSales: [450, 520, 480, 610, 590, 750, 810] },
+  { id: 'v2', name: 'TechHaven Electronics', contactName: 'John Doe', email: 'john@techhaven.com', phone: '+1987654321', status: 'Active', commission: 15, joinedAt: '2023-03-22', revenue: 12500, productsCount: 45, tier: 'Top Seller', rating: 4.6, location: 'Shenzhen, China', fulfillmentRate: 94, recentSales: [120, 150, 140, 180, 175, 200, 190] },
+  { id: 'v3', name: 'StyleBoutique', contactName: 'Jane Smith', email: 'jane@styleboutique.com', phone: '+1555666777', status: 'Pending', commission: 18, joinedAt: '2023-11-05', revenue: 0, productsCount: 0, tier: 'New Vendor', rating: 0, location: 'Guangzhou, China', fulfillmentRate: 0, recentSales: [0, 0, 0, 0, 0, 0, 0] },
+  { id: 'v4', name: 'HomeEssentials', contactName: 'Robert Johnson', email: 'robert@homeessentials.com', phone: '+1444555666', status: 'Suspended', commission: 12, joinedAt: '2023-06-10', revenue: 8400, productsCount: 30, tier: 'Standard', rating: 3.2, location: 'Yiwu, China', fulfillmentRate: 81, recentSales: [50, 40, 60, 30, 20, 10, 0] }
 ];
 
 const getInitialVendors = () => {
@@ -521,7 +521,11 @@ export const getAllVendors = () => [...globalVendors];
 
 export const addVendor = (vendor) => {
   const newId = 'v' + (Date.now() + Math.floor(Math.random() * 1000));
-  const newVendor = { ...vendor, id: newId, joinedAt: new Date().toISOString().split('T')[0], revenue: 0, productsCount: 0 };
+  const newVendor = { 
+    tier: 'New Vendor', rating: 0, fulfillmentRate: 100, recentSales: [0, 0, 0, 0, 0, 0, 0], location: 'Not Specified',
+    ...vendor, 
+    id: newId, joinedAt: new Date().toISOString().split('T')[0], revenue: 0, productsCount: 0 
+  };
   globalVendors.push(newVendor);
   saveVendors();
   return newVendor;
@@ -555,4 +559,81 @@ export const useVendors = () => {
   }, []);
 
   return vendors;
+};
+
+// ------------------------------------------------------------------
+// Homepage Layout Controls
+// ------------------------------------------------------------------
+const defaultHomepageLayout = {
+  heroSlider: true,
+  categoryHeroSliders: {},
+  sections: [
+    { id: 'flashSale', title: 'Flash Sale', visible: true },
+    { id: 'globalShop', title: 'Global Shop', visible: true },
+    { id: 'factoryDirect', title: 'Factory Direct', visible: true }
+  ],
+  tabs: [
+    { label: 'All Products', visible: true },
+    { label: 'Free Shipping', visible: true },
+    { label: 'Choice', visible: true },
+    { label: 'Combo Offer', visible: true },
+    { label: 'Cash on Delivery', visible: true },
+    { label: '24h Delivery', visible: true }
+  ]
+};
+
+const getInitialHomepageLayout = () => {
+  const stored = localStorage.getItem('mockHomepageLayout');
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      // Migration from old object-based format to new array-based format
+      if (!Array.isArray(parsed.sections) || !Array.isArray(parsed.tabs)) {
+        return JSON.parse(JSON.stringify(defaultHomepageLayout));
+      }
+      // Force update tabs to default to ensure new requested tabs are shown instead of old cached ones
+      parsed.tabs = JSON.parse(JSON.stringify(defaultHomepageLayout.tabs));
+      return { ...defaultHomepageLayout, ...parsed };
+    } catch (e) {
+      console.error("Failed to parse homepage layout", e);
+    }
+  }
+  return JSON.parse(JSON.stringify(defaultHomepageLayout));
+};
+
+let globalHomepageLayout = getInitialHomepageLayout();
+
+const saveHomepageLayout = () => {
+  localStorage.setItem('mockHomepageLayout', JSON.stringify(globalHomepageLayout));
+  window.dispatchEvent(new Event('layout-updated'));
+};
+
+export const getHomepageLayout = () => ({ ...globalHomepageLayout });
+
+export const updateHomepageLayout = (newLayout) => {
+  globalHomepageLayout = {
+    ...globalHomepageLayout,
+    ...newLayout
+  };
+  saveHomepageLayout();
+};
+
+export const useHomepageLayout = () => {
+  const [layout, setLayout] = useState(getHomepageLayout());
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setLayout(getHomepageLayout());
+    };
+    window.addEventListener('layout-updated', handleUpdate);
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'mockHomepageLayout') {
+        globalHomepageLayout = getInitialHomepageLayout();
+        handleUpdate();
+      }
+    });
+    return () => window.removeEventListener('layout-updated', handleUpdate);
+  }, []);
+
+  return layout;
 };

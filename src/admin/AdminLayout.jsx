@@ -5,7 +5,7 @@ import {
   Box, Truck, CreditCard, RefreshCcw, Megaphone, Globe, 
   Star, BarChart2, HeadphonesIcon, ShieldCheck, Bell, 
   DownloadCloud, Settings, Activity, Menu, Search, Sun, Moon,
-  ChevronDown, Wrench, Layers, PlusCircle
+  ChevronDown, Wrench, Layers, PlusCircle, Tag
 } from 'lucide-react';
 import './admin.css';
 
@@ -30,6 +30,7 @@ const sidebarGroups = [
       { path: 'products', icon: Package, label: 'Products & Catalog' },
       { path: 'products/add', icon: PlusCircle, label: 'Add Product' },
       { path: 'categories', icon: LayoutDashboard, label: 'Categories' },
+      { path: 'brands', icon: Tag, label: 'Brand Management' },
       { path: 'ourgoods-direct', icon: Store, label: 'OURGOODS' },
       { path: 'inventory', icon: Box, label: 'Inventory' }
     ]

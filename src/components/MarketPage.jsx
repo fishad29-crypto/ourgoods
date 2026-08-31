@@ -187,24 +187,11 @@ const MarketPage = () => {
             <h2 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 800, margin: '0 0 4px 0' }}>Collection</h2>
             <p style={{ margin: 0, color: '#666', fontSize: '12px' }}>{filteredProducts.length} items found</p>
           </div>
-          {isMobile && (
-            <button 
-              onClick={() => setShowMobileFilter(true)}
-              style={{ padding: '8px 16px', background: '#111', color: '#fff', border: 'none', borderRadius: '20px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-            >
-              <i className="las la-filter"></i> Filters
-            </button>
-          )}
         </div>
 
         <div style={{ display: 'flex', gap: '25px', alignItems: 'flex-start' }}>
           
-          {/* Desktop Sidebar */}
-          {!isMobile && (
-            <div style={{ width: '260px', flexShrink: 0, position: 'sticky', top: '80px', height: 'calc(100vh - 100px)', overflowY: 'auto' }}>
-              <FilterPanel />
-            </div>
-          )}
+
 
           {/* Product Grid */}
           <div style={{ flex: 1, width: '100%' }}>
@@ -226,22 +213,7 @@ const MarketPage = () => {
         </div>
       </div>
 
-      {/* Mobile Filter Bottom Sheet */}
-      {isMobile && showMobileFilter && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', animation: 'fadeIn 0.2s ease' }}>
-          <div style={{ background: '#f5f5f5', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', height: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', animation: 'slideUp 0.3s ease' }}>
-            <div style={{ padding: '20px 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', borderBottom: '1px solid #eaeaea' }}>
-              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>Filter & Sort</h2>
-              <div onClick={() => setShowMobileFilter(false)} style={{ width: '32px', height: '32px', background: '#f5f5f5', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer' }}>
-                <i className="las la-times" style={{ fontSize: '20px' }}></i>
-              </div>
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              <FilterPanel />
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 };

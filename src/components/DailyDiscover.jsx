@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ProductCard from './ProductCard';
 import { generateProducts } from '../utils/MockData';
+import { useHomepageLayout } from '../utils/MockData';
 import AdvancedProductBrowser from './AdvancedProductBrowser';
 
 // Module-level cache to persist shuffled products across unmounts
@@ -9,12 +10,11 @@ const dailyDiscoverCache = {};
 
 const TABS = [
   { label: 'All Products', icon: <i className="las la-shopping-bag" style={{ fontSize: '16px', color: 'var(--brand-pink)' }}></i> },
-  { label: 'Combo & Choice', icon: <i className="las la-gift" style={{ fontSize: '18px', color: 'var(--brand-pink)' }}></i> },
-  { label: 'Cash on Delivery', icon: <i className="las la-money-bill-wave" style={{ fontSize: '16px' }}></i> },
-  { label: 'New Arrival', icon: <i className="las la-star" style={{ fontSize: '16px' }}></i> },
-  { label: 'Flash Sale', icon: <i className="las la-bolt" style={{ fontSize: '16px' }}></i> },
-  { label: 'Global Shop', icon: <i className="las la-globe" style={{ fontSize: '16px' }}></i> },
-  { label: 'Factory Direct', icon: <i className="las la-industry" style={{ fontSize: '16px' }}></i> }
+  { label: 'Free Shipping', icon: <i className="las la-truck" style={{ fontSize: '18px', color: '#047857' }}></i> },
+  { label: 'Choice', icon: <i className="las la-check-circle" style={{ fontSize: '16px', color: '#3b82f6' }}></i> },
+  { label: 'Combo Offer', icon: <i className="las la-boxes" style={{ fontSize: '16px', color: '#eab308' }}></i> },
+  { label: 'Cash on Delivery', icon: <i className="las la-money-bill-wave" style={{ fontSize: '16px', color: '#10b981' }}></i> },
+  { label: '24h Delivery', icon: <i className="las la-clock" style={{ fontSize: '18px', color: '#333' }}></i> }
 ];
 
 const TabPage = ({ tabLabel }) => {
@@ -22,6 +22,13 @@ const TabPage = ({ tabLabel }) => {
 };
 
 const DailyDiscover = () => {
+  const homepageLayout = useHomepageLayout();
+  const visibleTabs = (homepageLayout.tabs || [])
+    .filter(t => t.visible !== false)
+    .map(t => ({
+      label: t.label,
+      icon: TABS.find(tab => tab.label === t.label)?.icon
+    }));
   const [activeTab, setActiveTab] = useState('All Products');
   const [isSticky, setIsSticky] = useState(false);
   const sentinelRef = useRef(null);
@@ -48,7 +55,7 @@ const DailyDiscover = () => {
       
       // Scroll to the new tab page
       if (scrollRef.current) {
-        const tabIndex = TABS.findIndex(t => t.label === newTab);
+        const tabIndex = visibleTabs.findIndex(t => t.label === newTab);
         if (tabIndex !== -1) {
           const pageWidth = scrollRef.current.clientWidth;
           isSyncing.current = true;
@@ -92,8 +99,8 @@ const DailyDiscover = () => {
     const scrollLeft = scrollRef.current.scrollLeft;
     const pageWidth = scrollRef.current.clientWidth;
     const activeIndex = Math.round(scrollLeft / pageWidth);
-    if (activeIndex >= 0 && activeIndex < TABS.length) {
-      const newTab = TABS[activeIndex].label;
+    if (activeIndex >= 0 && activeIndex < visibleTabs.length) {
+      const newTab = visibleTabs[activeIndex].label;
       if (newTab !== activeTab) {
         setActiveTab(newTab);
       }
@@ -103,7 +110,7 @@ const DailyDiscover = () => {
   const handleTabClick = (tabLabel) => {
     setActiveTab(tabLabel);
     if (scrollRef.current) {
-      const tabIndex = TABS.findIndex(t => t.label === tabLabel);
+      const tabIndex = visibleTabs.findIndex(t => t.label === tabLabel);
       if (tabIndex !== -1) {
         const pageWidth = scrollRef.current.clientWidth;
         isSyncing.current = true;
@@ -139,10 +146,11 @@ const DailyDiscover = () => {
       {/* Product Filter Tabs - Segmented Design */}
       <div className="no-scrollbar" style={{ display: 'flex', overflowX: 'auto', marginBottom: '15px', paddingBottom: '5px', paddingLeft: '8px', paddingRight: '8px', opacity: isSticky ? 0 : 1, pointerEvents: isSticky ? 'none' : 'auto' }}>
         <div style={{ display: 'flex', border: '1px solid #eaeaea', borderRadius: '6px', background: '#f5f5f5', minWidth: '100%', alignItems: 'stretch' }}>
-          {TABS.map((tab, idx, arr) => (
-            <div key={idx} 
+          {visibleTabs.map((tab, idx, arr) => (
+            <div 
+              key={idx} 
               ref={el => tabRefs.current[tab.label] = el}
-              onClick={() => handleTabClick(tab.label)}
+              onClick={() => handleTabClick(tab.label)} 
               style={{
               position: 'relative',
               background: activeTab === tab.label ? '#000' : '#f5f5f5',
@@ -192,7 +200,7 @@ const DailyDiscover = () => {
           overscrollBehaviorX: 'contain'
         }}
       >
-        {TABS.map((tab, idx) => (
+        {visibleTabs.map((tab, idx) => (
           <div key={idx} style={{ flex: '0 0 100%', scrollSnapAlign: 'start', width: '100%', minWidth: '100%' }}>
             <TabPage tabLabel={tab.label} />
           </div>

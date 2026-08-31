@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Bold, Italic, Underline, Baseline, PaintBucket, Link, List, ListOrdered, IndentIncrease, IndentDecrease, Eraser } from 'lucide-react';
+import { Bold, Italic, Underline, Baseline, PaintBucket, Link, List, ListOrdered, IndentIncrease, IndentDecrease, Eraser, Undo, Redo } from 'lucide-react';
 
 const RichTextEditor = ({ value, onChange, placeholder }) => {
   const editorRef = useRef(null);
@@ -61,6 +61,11 @@ const RichTextEditor = ({ value, onChange, placeholder }) => {
     <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#fff', transition: 'border-color 0.2s' }}>
       <div style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', borderBottom: '1px solid #f1f5f9', gap: '4px', flexWrap: 'wrap', backgroundColor: '#f8fafc' }}>
         
+        <Button onClick={() => execCommand('undo')} title="Undo"><Undo size={16} strokeWidth={2.5} /></Button>
+        <Button onClick={() => execCommand('redo')} title="Redo"><Redo size={16} strokeWidth={2.5} /></Button>
+        
+        <Divider />
+
         <Button onClick={() => execCommand('bold')} title="Bold"><Bold size={16} strokeWidth={2.5} /></Button>
         <Button onClick={() => execCommand('italic')} title="Italic"><Italic size={16} strokeWidth={2.5} /></Button>
         <Button onClick={() => execCommand('underline')} title="Underline"><Underline size={16} strokeWidth={2.5} /></Button>
@@ -109,7 +114,7 @@ const RichTextEditor = ({ value, onChange, placeholder }) => {
         contentEditable={true}
         onInput={handleInput}
         onBlur={handleInput}
-        style={{ width: '100%', border: 'none', padding: '16px', outline: 'none', fontSize: '14px', minHeight: '140px', backgroundColor: '#fff', color: '#334155', lineHeight: '1.5', overflowY: 'auto' }}
+        style={{ width: '100%', border: 'none', padding: '16px', outline: 'none', fontSize: '14px', fontWeight: 'normal', fontFamily: 'inherit', minHeight: '140px', maxHeight: '400px', backgroundColor: '#fff', color: '#334155', lineHeight: '1.5', overflowY: 'auto' }}
         data-placeholder={placeholder}
       />
     </div>

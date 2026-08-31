@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { ShoppingBag } from 'lucide-react';
 import ErrorBoundary from './components/ErrorBoundary';
+import { AuthProvider } from './context/AuthContext';
 import CustomerApp from './CustomerApp';
 import MaintenancePage from './components/MaintenancePage';
 import ProductDetailsPage from './components/ProductDetailsPage';
@@ -9,6 +10,12 @@ import ReviewsPage from './components/ReviewsPage';
 import CheckoutPage from './components/CheckoutPage';
 import OurgoodsDirectPage from './components/OurgoodsDirectPage';
 import MarketPage from './components/MarketPage';
+import GlobalShopPage from './components/GlobalShopPage';
+import StorePage from './components/StorePage';
+import AddressSetupPage from './components/AddressSetupPage';
+import RecentlyViewedPage from './components/RecentlyViewedPage';
+import HelpCenterPage from './components/HelpCenterPage';
+import CustomerSettingsPage from './components/CustomerSettingsPage';
 import AdminLayout from './admin/AdminLayout';
 
 // Admin Pages
@@ -20,6 +27,7 @@ import Categories from './admin/pages/Categories';
 import AddProduct from './admin/pages/AddProduct';
 import OurgoodsDirect from './admin/pages/OurgoodsDirect';
 import VendorManagement from './admin/pages/VendorManagement';
+import BrandManagement from './admin/pages/BrandManagement';
 import Customers from './admin/pages/Customers';
 import PreOrderManagement from './admin/pages/PreOrderManagement';
 import Inventory from './admin/pages/Inventory';
@@ -101,45 +109,54 @@ function App() {
   }
 
   return (
-    <ErrorBoundary>
-      <Routes>
-        <Route path="/*" element={<CustomerApp />} />
-        <Route path="/product/:id" element={<ProductDetailsPage />} />
-        <Route path="/product/:id/reviews" element={<ReviewsPage />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/wishlist" element={<WishlistPage />} />
-        <Route path="/ourgoods-direct" element={<OurgoodsDirectPage />} />
-        <Route path="/market/:marketType" element={<MarketPage />} />
-        
-        <Route path="/admin/login" element={<AdminLogin />} />
-        
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<DashboardHome />} />
-          <Route path="orders" element={<Orders />} />
-          <Route path="products" element={<ProductsCatalog />} />
-          <Route path="categories" element={<Categories />} />
-          <Route path="products/add" element={<AddProduct />} />
-          <Route path="ourgoods-direct" element={<OurgoodsDirect />} />
-          <Route path="vendors" element={<VendorManagement />} />
-          <Route path="customers" element={<Customers />} />
-          <Route path="pre-orders" element={<PreOrderManagement />} />
-          <Route path="inventory" element={<Inventory />} />
-          <Route path="shipping" element={<ShippingCourier />} />
-          <Route path="payments" element={<Payments />} />
-          <Route path="returns" element={<ReturnsRefunds />} />
-          <Route path="marketing" element={<Marketing />} />
-          <Route path="cms" element={<WebsiteCMS />} />
-          <Route path="reviews" element={<ReviewsQA />} />
-          <Route path="reports" element={<ReportsAnalytics />} />
-          <Route path="support" element={<CustomerSupport />} />
-          <Route path="staff" element={<StaffManagement />} />
-          <Route path="notifications" element={<Notifications />} />
-          <Route path="import-export" element={<ImportExport />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="logs" element={<ActivityLogs />} />
-        </Route>
-      </Routes>
-    </ErrorBoundary>
+    <AuthProvider>
+      <ErrorBoundary>
+        <Routes>
+          <Route path="/*" element={<CustomerApp />} />
+          <Route path="/product/:id" element={<ProductDetailsPage />} />
+          <Route path="/product/:id/reviews" element={<ReviewsPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/wishlist" element={<WishlistPage />} />
+          <Route path="/recently-viewed" element={<RecentlyViewedPage />} />
+          <Route path="/help" element={<HelpCenterPage />} />
+          <Route path="/settings" element={<CustomerSettingsPage />} />
+          <Route path="/addresses" element={<AddressSetupPage />} />
+          <Route path="/ourgoods-direct" element={<OurgoodsDirectPage />} />
+          <Route path="/global-shop" element={<GlobalShopPage />} />
+          <Route path="/market/:marketType" element={<MarketPage />} />
+          <Route path="/store/:id" element={<StorePage />} />
+          
+          <Route path="/admin/login" element={<AdminLogin />} />
+          
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<DashboardHome />} />
+            <Route path="orders" element={<Orders />} />
+            <Route path="products" element={<ProductsCatalog />} />
+            <Route path="categories" element={<Categories />} />
+            <Route path="products/add" element={<AddProduct />} />
+            <Route path="ourgoods-direct" element={<OurgoodsDirect />} />
+            <Route path="vendors" element={<VendorManagement />} />
+            <Route path="brands" element={<BrandManagement />} />
+            <Route path="customers" element={<Customers />} />
+            <Route path="pre-orders" element={<PreOrderManagement />} />
+            <Route path="inventory" element={<Inventory />} />
+            <Route path="shipping" element={<ShippingCourier />} />
+            <Route path="payments" element={<Payments />} />
+            <Route path="returns" element={<ReturnsRefunds />} />
+            <Route path="marketing" element={<Marketing />} />
+            <Route path="cms" element={<WebsiteCMS />} />
+            <Route path="reviews" element={<ReviewsQA />} />
+            <Route path="reports" element={<ReportsAnalytics />} />
+            <Route path="support" element={<CustomerSupport />} />
+            <Route path="staff" element={<StaffManagement />} />
+            <Route path="notifications" element={<Notifications />} />
+            <Route path="import-export" element={<ImportExport />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="logs" element={<ActivityLogs />} />
+          </Route>
+        </Routes>
+      </ErrorBoundary>
+    </AuthProvider>
   );
 }
 
