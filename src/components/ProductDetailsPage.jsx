@@ -276,42 +276,202 @@ const ProductDetailsPage = () => {
   const [lightboxTouchStartX, setLightboxTouchStartX] = useState(null);
   const [selectedAttributes, setSelectedAttributes] = useState({});
   const [skuQuantity, setSkuQuantity] = useState(1);
-  const [customerLocationName, setCustomerLocationName] = useState('Dhaka');
-  const [customerAddress, setCustomerAddress] = useState(`Fish..., 159****5575, Dhaka, Bangladesh...`);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('userAddresses');
-    if (saved) {
-      try {
-        const addresses = JSON.parse(saved);
-        const defaultAddr = addresses.find(a => a.isDefault) || addresses[0];
-        if (defaultAddr) {
-          setCustomerLocationName(defaultAddr.city);
-          const shortName = defaultAddr.recipient.slice(0, 4) + '...';
-          setCustomerAddress(`${shortName}, ${defaultAddr.phone}, ${defaultAddr.addressLine}, ${defaultAddr.city}`);
-        }
-      } catch (e) {
-        console.error('Error parsing addresses', e);
+  // Delivery Address & Location State
+  const [selectedAddress, setSelectedAddress] = useState(() => {
+    try {
+      const savedSel = localStorage.getItem('selectedAddress');
+      if (savedSel) return JSON.parse(savedSel);
+      const savedList = localStorage.getItem('userAddresses');
+      if (savedList) {
+        const list = JSON.parse(savedList);
+        const def = list.find(a => a.isDefault) || list[0];
+        if (def) return def;
       }
-    } else {
-      setCustomerAddress(`Fish..., 159****5575, ${customerLocationName}, Bangladesh...`);
+    } catch (e) {
+      console.error(e);
     }
-  }, []);
-  const paymentOptsRawForState = product?.paymentOption || 'cod';
-  const paymentOptsArrayForState = Array.isArray(paymentOptsRawForState) ? paymentOptsRawForState : [paymentOptsRawForState];
-  const [paymentMode, setPaymentMode] = useState(paymentOptsArrayForState[0]);
-  
-  useEffect(() => {
-    if (paymentOptsArrayForState.length > 0 && !paymentOptsArrayForState.includes(paymentMode)) {
-      setPaymentMode(paymentOptsArrayForState[0]);
-    }
-  }, [product?.paymentOption, paymentMode]);
+    return null;
+  });
 
-  const [selectedPayment, setSelectedPayment] = useState('bKash');
-  const [savedPayments, setSavedPayments] = useState({ bKash: '', Nagad: '', Bank: '' });
-  const [newPaymentInput, setNewPaymentInput] = useState('');
-  const [showPaymentSetupModal, setShowPaymentSetupModal] = useState(false);
-  const deliveryCharge = customerLocationName.toLowerCase() === 'dhaka' ? 60 : 130;
+  const [savedAddressesList, setSavedAddressesList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('userAddresses');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [addressFormData, setAddressFormData] = useState({
+    recipient: '',
+    phone: '',
+    city: 'Dhaka',
+    addressLine: '',
+    name: 'Home'
+  });
+
+  // Sync address changes across tabs/windows or after returning from /addresses
+  useEffect(() => {
+    const handleSync = () => {
+      try {
+        const savedSel = localStorage.getItem('selectedAddress');
+        if (savedSel) setSelectedAddress(JSON.parse(savedSel));
+        const savedList = localStorage.getItem('userAddresses');
+        if (savedList) setSavedAddressesList(JSON.parse(savedList));
+      } catch (e) {}
+    };
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('focus', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('focus', handleSync);
+    };
+  }, []);
+
+  const handleSelectOrSaveAddress = (addr) => {
+    setSelectedAddress(addr);
+    localStorage.setItem('selectedAddress', JSON.stringify(addr));
+    try {
+      const existing = localStorage.getItem('userAddresses');
+      let list = existing ? JSON.parse(existing) : [];
+      const idx = list.findIndex(a => a.id === addr.id || (a.phone === addr.phone && a.addressLine === addr.addressLine));
+      if (idx === -1) {
+        list = [...list, { ...addr, id: addr.id || Date.now() }];
+      } else {
+        list[idx] = { ...list[idx], ...addr };
+      }
+      localStorage.setItem('userAddresses', JSON.stringify(list));
+      setSavedAddressesList(list);
+    } catch (e) {}
+    setShowAddressModal(false);
+  };
+
+  const handleSaveNewAddress = (e) => {
+    e.preventDefault();
+    if (!addressFormData.recipient.trim() || !addressFormData.phone.trim() || !addressFormData.addressLine.trim()) {
+      alert('Please fill all required address fields.');
+      return;
+    }
+    const newAddr = {
+      id: Date.now(),
+      name: addressFormData.name || 'Home',
+      recipient: addressFormData.recipient.trim(),
+      phone: addressFormData.phone.trim(),
+      city: addressFormData.city || 'Dhaka',
+      addressLine: addressFormData.addressLine.trim(),
+      isDefault: true
+    };
+    handleSelectOrSaveAddress(newAddr);
+    setAddressFormData({ recipient: '', phone: '', city: 'Dhaka', addressLine: '', name: 'Home' });
+  };
+
+  // Payment Options & Cashout Charge setup
+  // Set payment options: bKash Merchant (1.85%) and Nagad Merchant (1.45%) first!
+  const [paymentMode, setPaymentMode] = useState('bkash_merchant');
+  
+  // Payment Gateway & Order states
+  const [showBkashGateway, setShowBkashGateway] = useState(false);
+  const [showNagadGateway, setShowNagadGateway] = useState(false);
+  const [showOrderSuccessModal, setShowOrderSuccessModal] = useState(false);
+  const [lastPlacedOrder, setLastPlacedOrder] = useState(null);
+  const [orderInvoiceId] = useState(() => `OG-${Math.floor(100000 + Math.random() * 900000)}`);
+
+  // bKash Gateway Steps
+  const [bkashStep, setBkashStep] = useState(1);
+  const [bkashNumber, setBkashNumber] = useState('');
+  const [bkashOtp, setBkashOtp] = useState('');
+  const [bkashPin, setBkashPin] = useState('');
+  const [bkashTrxId, setBkashTrxId] = useState('');
+  const [bkashPayMethodType, setBkashPayMethodType] = useState('gateway');
+
+  // Nagad Gateway Steps
+  const [nagadStep, setNagadStep] = useState(1);
+  const [nagadNumber, setNagadNumber] = useState('');
+  const [nagadOtp, setNagadOtp] = useState('');
+  const [nagadPin, setNagadPin] = useState('');
+  const [nagadTrxId, setNagadTrxId] = useState('');
+  const [nagadPayMethodType, setNagadPayMethodType] = useState('gateway');
+
+  // Location & Delivery Calculation
+  const customerCity = selectedAddress?.city || 'Dhaka';
+  const isDhakaCity = customerCity.toLowerCase().includes('dhaka');
+  // Free delivery for Dhaka as pictured ("Free delivery (Dhaka)") or product freeShipping
+  const isFreeDelivery = Boolean(product?.freeShipping || isDhakaCity);
+  const deliveryCharge = isFreeDelivery ? 0 : 130;
+
+  // Combo offer discounted price if applicable
+  const rawSubtotal = (product?.price || 0) * skuQuantity;
+  let comboDiscount = 0;
+  if (product?.enableComboOffer && product?.comboTiers?.length > 0) {
+    const matchedTier = [...product.comboTiers]
+      .sort((a, b) => Number(b.minQty) - Number(a.minQty))
+      .find(t => skuQuantity >= Number(t.minQty));
+    if (matchedTier) {
+      if (matchedTier.discountType === 'percentage') {
+        comboDiscount = Math.round((rawSubtotal * Number(matchedTier.discountValue)) / 100);
+      } else if (matchedTier.discountType === 'fixed') {
+        comboDiscount = Number(matchedTier.discountValue);
+      }
+    }
+  }
+  const subtotalAfterDiscount = Math.max(0, rawSubtotal - comboDiscount);
+
+  // Cash Out Charge Calculation
+  // bKash Merchant: 1.85%
+  // Nagad Merchant: 1.45%
+  // Cash on Delivery: 0%
+  let cashOutRate = 0;
+  let cashOutMethodName = '';
+  if (paymentMode === 'bkash_merchant' || paymentMode === 'bkash') {
+    cashOutRate = 0.0185;
+    cashOutMethodName = 'bKash Merchant';
+  } else if (paymentMode === 'nagad_merchant' || paymentMode === 'nagad') {
+    cashOutRate = 0.0145;
+    cashOutMethodName = 'Nagad Merchant';
+  }
+
+  const cashOutCharge = cashOutRate > 0 ? Math.round(subtotalAfterDiscount * cashOutRate) : 0;
+  const finalOrderTotal = subtotalAfterDiscount + deliveryCharge + cashOutCharge;
+
+  const handleCompleteOrder = ({ method, status, trxId }) => {
+    const orderId = `#OG-${Math.floor(100000 + Math.random() * 900000)}`;
+    const newOrder = {
+      orderId,
+      date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+      createdAt: new Date().toISOString(),
+      items: [{
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        quantity: skuQuantity,
+        selectedAttributes
+      }],
+      shippingAddress: selectedAddress,
+      paymentMethod: method,
+      paymentStatus: status,
+      orderStatus: status === 'Paid' ? 'Processing' : 'Pending',
+      transactionId: trxId || null,
+      subtotal: rawSubtotal,
+      discount: comboDiscount,
+      deliveryCharge,
+      cashOutCharge,
+      totalAmount: finalOrderTotal
+    };
+
+    setLastPlacedOrder(newOrder);
+    localStorage.setItem('recentOrder', JSON.stringify(newOrder));
+    try {
+      const existing = localStorage.getItem('userOrders');
+      const ordersList = existing ? JSON.parse(existing) : [];
+      localStorage.setItem('userOrders', JSON.stringify([newOrder, ...ordersList]));
+    } catch (e) {
+      console.error('Error saving userOrders', e);
+    }
+
+    setShowOrderSuccessModal(true);
+  };
   const productAttributes = useMemo(() => {
     if (!product) return [];
     
@@ -1268,105 +1428,146 @@ const ProductDetailsPage = () => {
                onClick={() => setShowSkuModal(false)}
             ></i>
             
-            {/* Address Row */}
+            {/* Address Row - Matching user picture */}
             <div 
-              onClick={() => navigate('/addresses')}
-              style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', background: '#F8F8F8', padding: '12px', borderRadius: '8px', marginBottom: '16px', marginLeft: '32px', marginRight: '32px' }}
+              onClick={() => setShowAddressModal(true)}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                cursor: 'pointer', 
+                background: '#F8F8F8', 
+                padding: '12px 14px', 
+                borderRadius: '8px', 
+                marginBottom: '16px', 
+                marginLeft: '32px', 
+                marginRight: '32px',
+                border: '1px solid #EEEEEE',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#f2f2f2'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#F8F8F8'}
             >
-              <i className="las la-map-marker" style={{ fontSize: '20px', color: '#999', marginRight: '6px' }}></i>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ fontSize: '14px', color: '#333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: '12px', fontWeight: '500' }}>
-                  {customerAddress}
-                </div>
-                <div style={{ fontSize: '12px', color: '#E91E63', marginTop: '2px', fontWeight: 'bold' }}>
-                  Delivery Charge: ৳{deliveryCharge} ({customerLocationName})
-                </div>
+              <i className="las la-map-marker" style={{ fontSize: '22px', color: '#666', marginRight: '10px', flexShrink: 0 }}></i>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                {selectedAddress ? (
+                  <>
+                    <div style={{ fontSize: '13px', color: '#111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: '600' }}>
+                      {selectedAddress.recipient} • {selectedAddress.phone}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+                      {selectedAddress.addressLine}, {selectedAddress.city}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#E91E63', marginTop: '2px', fontWeight: 'bold' }}>
+                      {isFreeDelivery ? `Free delivery (${customerCity})` : `Delivery: ৳${deliveryCharge} (${customerCity})`}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: '14px', color: '#222', fontWeight: '600' }}>
+                      Select delivery address
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#E91E63', marginTop: '2px', fontWeight: 'bold' }}>
+                      Free delivery (Dhaka)
+                    </div>
+                  </>
+                )}
               </div>
-              <i className="las la-angle-right" style={{ fontSize: '16px', color: '#bbb' }}></i>
+              <i className="las la-angle-right" style={{ fontSize: '16px', color: '#bbb', marginLeft: '8px', flexShrink: 0 }}></i>
             </div>
 
-            {/* Payment Selection */}
-            <div style={{ marginBottom: '24px', marginRight: '32px' }}>
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-                {paymentOptsArrayForState.map((opt, idx) => {
-                  let paymentText = '';
-                  let paymentIcon = '';
-                  
-                  const customPaymentMatch = paymentLibrary.find(p => p.id === opt);
-                  
-                  const palettes = [
-                    { bg: '#e8f5e9', color: '#4caf50', icon: 'las la-money-bill-wave' },
-                    { bg: '#e3f2fd', color: '#2196f3', icon: 'las la-credit-card' },
-                    { bg: '#fff3e0', color: '#ff9800', icon: 'las la-wallet' },
-                    { bg: '#f3e5f5', color: '#9c27b0', icon: 'las la-gift' },
-                    { bg: '#e0f2f1', color: '#009688', icon: 'las la-money-check' },
-                    { bg: '#ffebee', color: '#f44336', icon: 'las la-receipt' },
-                    { bg: '#fff8e1', color: '#ffc107', icon: 'las la-coins' },
-                    { bg: '#ede7f6', color: '#673ab7', icon: 'las la-tags' }
-                  ];
-                  const fallbackPalette = palettes[idx % palettes.length];
-                  
-                  if (customPaymentMatch) {
-                     paymentText = customPaymentMatch.label;
-                     const labelLower = paymentText.toLowerCase();
-                     if (opt === 'cod' || labelLower.includes('cash on delivery')) {
-                       paymentIcon = 'las la-money-bill-wave';
-                     } else if (opt === 'pay_now' || opt === 'full_advance' || labelLower.includes('pay now') || labelLower.includes('full advance')) {
-                       paymentIcon = 'las la-credit-card';
-                     } else if (opt === 'partial_advance' || labelLower.includes('partial advance')) {
-                       paymentIcon = 'las la-wallet';
-                     } else {
-                       paymentIcon = fallbackPalette.icon;
-                     }
-                  } else if (opt === 'pay_now' || opt === 'full_advance') {
-                     paymentText = 'Pay Now';
-                     paymentIcon = 'las la-credit-card';
-                  } else if (opt === 'partial_advance') {
-                     paymentText = 'Partial Advance';
-                     paymentIcon = 'las la-wallet';
-                  } else if (opt.startsWith && (opt.startsWith('custom_payment:') || opt.startsWith('custom_pay_local:') || opt.startsWith('custom_pay_global:'))) {
-                     let raw = opt.replace('custom_payment:', '').replace('custom_pay_local:', '').replace('custom_pay_global:', '');
-                     paymentText = raw.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-                     paymentIcon = fallbackPalette.icon;
-                  } else {
-                     paymentText = 'Cash on Delivery';
-                     paymentIcon = 'las la-money-bill-wave';
-                  }
-                  
-                  const isSelected = paymentMode === opt;
-                  
-                  const isCod = opt === 'cod' || paymentText.toLowerCase().includes('cash on delivery');
-                  const bgColor = isCod ? '#e8f5e9' : '#e3f2fd';
-                  const textColor = isCod ? '#2e7d32' : '#1976d2';
-                  const borderColor = isSelected ? textColor : 'transparent';
-                  
-                  return (
-                    <button
-                      key={opt}
-                      onClick={() => { setPaymentMode(opt); if (!isCod) setShowPaymentSetupModal(true); }}
-                      style={{ 
-                        flex: 1, 
-                        padding: '10px 8px', 
-                        border: `1px solid ${borderColor}`, 
-                        background: bgColor, 
-                        borderRadius: '6px', 
-                        cursor: 'pointer', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        gap: '6px',
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      <i className={paymentIcon} style={{ fontSize: '18px', color: textColor }}></i>
-                      <span style={{ fontSize: '12px', fontWeight: isSelected ? '700' : '600', color: textColor }}>{paymentText}</span>
-                    </button>
-                  );
-                })}
+            {/* Payment Selection - bKash & Nagad Merchant First */}
+            <div style={{ marginBottom: '20px', marginLeft: '32px', marginRight: '32px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                Payment Method
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                {/* 1. bKash Merchant */}
+                <button
+                  type="button"
+                  onClick={() => setPaymentMode('bkash_merchant')}
+                  style={{
+                    padding: '10px 6px',
+                    borderRadius: '8px',
+                    border: `1.5px solid ${paymentMode === 'bkash_merchant' ? '#E2136E' : '#EAEAEA'}`,
+                    background: paymentMode === 'bkash_merchant' ? '#FDF2F7' : '#FAFAFA',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    position: 'relative',
+                    transition: 'all 0.2s',
+                    boxShadow: paymentMode === 'bkash_merchant' ? '0 2px 8px rgba(226, 19, 110, 0.15)' : 'none'
+                  }}
+                >
+                  <img src="https://sandbox.sslcommerz.com/gwprocess/v4/image/gw/bkash.png" alt="bKash" style={{ height: '18px', objectFit: 'contain' }} />
+                  <span style={{ fontSize: '12px', fontWeight: paymentMode === 'bkash_merchant' ? 700 : 600, color: paymentMode === 'bkash_merchant' ? '#E2136E' : '#333', textAlign: 'center' }}>
+                    bKash Merchant
+                  </span>
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#E2136E', background: '#ffe4ef', padding: '1px 5px', borderRadius: '4px' }}>
+                    +1.85% Cash Out
+                  </span>
+                </button>
 
+                {/* 2. Nagad Merchant */}
+                <button
+                  type="button"
+                  onClick={() => setPaymentMode('nagad_merchant')}
+                  style={{
+                    padding: '10px 6px',
+                    borderRadius: '8px',
+                    border: `1.5px solid ${paymentMode === 'nagad_merchant' ? '#ED1C24' : '#EAEAEA'}`,
+                    background: paymentMode === 'nagad_merchant' ? '#FFF5EE' : '#FAFAFA',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    position: 'relative',
+                    transition: 'all 0.2s',
+                    boxShadow: paymentMode === 'nagad_merchant' ? '0 2px 8px rgba(237, 28, 36, 0.15)' : 'none'
+                  }}
+                >
+                  <img src="https://sandbox.sslcommerz.com/gwprocess/v4/image/gw/nagad.png" alt="Nagad" style={{ height: '18px', objectFit: 'contain' }} />
+                  <span style={{ fontSize: '12px', fontWeight: paymentMode === 'nagad_merchant' ? 700 : 600, color: paymentMode === 'nagad_merchant' ? '#ED1C24' : '#333', textAlign: 'center' }}>
+                    Nagad Merchant
+                  </span>
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#ED1C24', background: '#ffe6e6', padding: '1px 5px', borderRadius: '4px' }}>
+                    +1.45% Cash Out
+                  </span>
+                </button>
 
-
+                {/* 3. Cash on Delivery */}
+                <button
+                  type="button"
+                  onClick={() => setPaymentMode('cod')}
+                  style={{
+                    padding: '10px 6px',
+                    borderRadius: '8px',
+                    border: `1.5px solid ${paymentMode === 'cod' ? '#2E7D32' : '#EAEAEA'}`,
+                    background: paymentMode === 'cod' ? '#F0FFF4' : '#FAFAFA',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    position: 'relative',
+                    transition: 'all 0.2s',
+                    boxShadow: paymentMode === 'cod' ? '0 2px 8px rgba(46, 125, 50, 0.15)' : 'none'
+                  }}
+                >
+                  <i className="las la-money-bill-wave" style={{ fontSize: '20px', color: '#2E7D32' }}></i>
+                  <span style={{ fontSize: '12px', fontWeight: paymentMode === 'cod' ? 700 : 600, color: paymentMode === 'cod' ? '#2E7D32' : '#333', textAlign: 'center' }}>
+                    Cash on Delivery
+                  </span>
+                  <span style={{ fontSize: '9px', fontWeight: 600, color: '#2E7D32', background: '#e8f5e9', padding: '1px 5px', borderRadius: '4px' }}>
+                    Standard COD
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Header: Image & Price */}
@@ -1546,36 +1747,62 @@ const ProductDetailsPage = () => {
 
             {/* Bottom Button */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', padding: '12px 16px', background: '#fff', borderTop: '1px solid #eee', boxShadow: '0 -4px 12px rgba(0,0,0,0.05)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '0 4px' }}>
-                <div style={{ fontSize: '12px', color: '#666' }}>
-                  Subtotal ৳{(product.price * skuQuantity).toLocaleString()} + Delivery ৳{deliveryCharge}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '12px', padding: '0 4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#666' }}>
+                  <span>Subtotal ({skuQuantity} {skuQuantity > 1 ? 'items' : 'item'}):</span>
+                  <span>৳{subtotalAfterDiscount.toLocaleString()}</span>
                 </div>
-                <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#E91E63' }}>
-                  Total: ৳{((product.price * skuQuantity) + deliveryCharge).toLocaleString()}
+                {comboDiscount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#16a34a', fontWeight: 600 }}>
+                    <span>Combo Discount:</span>
+                    <span>-৳{comboDiscount.toLocaleString()}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#666' }}>
+                  <span>Delivery ({customerCity}):</span>
+                  <span>{deliveryCharge === 0 ? <strong style={{ color: '#E91E63' }}>FREE</strong> : `৳${deliveryCharge}`}</span>
+                </div>
+                {cashOutCharge > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: paymentMode === 'bkash_merchant' ? '#E2136E' : '#ED1C24', fontWeight: 700 }}>
+                    <span>{cashOutMethodName} Cash Out Charge ({(cashOutRate * 100).toFixed(2)}%):</span>
+                    <span>+৳{cashOutCharge.toLocaleString()}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '16px', fontWeight: 'bold', color: '#111', borderTop: '1px dashed #eee', paddingTop: '6px', marginTop: '2px' }}>
+                  <span>Total Amount:</span>
+                  <span style={{ color: '#E91E63' }}>৳{finalOrderTotal.toLocaleString()}</span>
                 </div>
               </div>
               <button 
-                style={{ width: '100%', padding: '14px 24px', background: '#E91E63', color: '#fff', border: 'none', borderRadius: '24px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}
+                style={{ width: '100%', padding: '14px 24px', background: '#E91E63', color: '#fff', border: 'none', borderRadius: '24px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(233, 30, 99, 0.3)' }}
                 onClick={() => {
-                  if(Object.keys(selectedAttributes).length < productAttributes.length) {
-                    alert('Please select all options before proceeding');
+                  if (Object.keys(selectedAttributes).length < productAttributes.length) {
+                    alert('Please select all product options before proceeding');
                     return;
                   }
-                  if(paymentMode !== 'cod' && !savedPayments[selectedPayment]) {
-                    setShowPaymentSetupModal(true);
+                  if (!selectedAddress || !selectedAddress.phone || !selectedAddress.addressLine) {
+                    setShowAddressModal(true);
                     return;
                   }
-                  addToCart({ 
-                    ...product, 
-                    selectedAttributes, 
-                    paymentMethod: paymentMode === 'cod' ? 'Cash on Delivery' : selectedPayment, 
-                    paymentDetails: paymentMode === 'cod' ? null : savedPayments[selectedPayment] 
-                  }, skuQuantity);
-                  setShowSkuModal(false);
-                  navigate('/checkout');
+                  // Direct payment access!
+                  if (paymentMode === 'bkash_merchant' || paymentMode === 'bkash') {
+                    setBkashStep(1);
+                    setShowBkashGateway(true);
+                  } else if (paymentMode === 'nagad_merchant' || paymentMode === 'nagad') {
+                    setNagadStep(1);
+                    setShowNagadGateway(true);
+                  } else {
+                    // Cash on Delivery
+                    handleCompleteOrder({
+                      method: 'Cash on Delivery',
+                      status: 'Pending',
+                      trxId: null
+                    });
+                  }
                 }}
               >
-                Confirm
+                <i className={paymentMode === 'bkash_merchant' ? 'las la-bolt' : paymentMode === 'nagad_merchant' ? 'las la-wallet' : 'las la-check-circle'}></i>
+                {paymentMode === 'bkash_merchant' ? 'Proceed to bKash Payment' : paymentMode === 'nagad_merchant' ? 'Proceed to Nagad Payment' : 'Confirm Order (COD)'} • ৳{finalOrderTotal.toLocaleString()}
               </button>
             </div>
           </div>
@@ -1648,67 +1875,649 @@ const ProductDetailsPage = () => {
           </div>
         </div>
       )}
-      {/* Payment Setup Modal */}
-      {showPaymentSetupModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.6)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowPaymentSetupModal(false)}>
-          <div style={{ background: '#fff', borderRadius: '16px', width: '90%', maxWidth: '400px', padding: '24px', position: 'relative', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setShowPaymentSetupModal(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#888' }}>
-              <i className="las la-times"></i>
-            </button>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', color: '#333' }}>Setup Payment Details</h3>
-            
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-              {[
-                { name: 'bKash', iconUrl: 'https://sandbox.sslcommerz.com/gwprocess/v4/image/gw/bkash.png' }, 
-                { name: 'Nagad', iconUrl: 'https://sandbox.sslcommerz.com/gwprocess/v4/image/gw/nagad.png' }, 
-                { name: 'Bank', icon: 'las la-university' }
-              ].map(method => (
-                <button 
-                  key={method.name}
-                  onClick={() => { setSelectedPayment(method.name); setNewPaymentInput(''); }}
-                  style={{ flex: 1, padding: '10px', border: `1px solid ${selectedPayment === method.name ? '#E91E63' : '#ddd'}`, background: selectedPayment === method.name ? '#FFF0F5' : '#fff', color: selectedPayment === method.name ? '#E91E63' : '#666', borderRadius: '8px', fontSize: '14px', fontWeight: selectedPayment === method.name ? 'bold' : 'normal', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
-                >
-                  {method.iconUrl ? (
-                    <img src={method.iconUrl} alt={method.name} style={{ height: '18px', objectFit: 'contain' }} />
-                  ) : (
-                    <>
-                      <i className={method.icon} style={{ fontSize: '18px' }}></i>
-                      {method.name}
-                    </>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <input 
-                type="text" 
-                placeholder={selectedPayment === 'Bank' ? 'Enter Bank Account details' : `Enter ${selectedPayment} number`}
-                value={newPaymentInput}
-                onChange={e => setNewPaymentInput(e.target.value)}
-                style={{ padding: '14px 16px', border: '1px solid #ddd', borderRadius: '8px', fontSize: '14px', outline: 'none' }}
-              />
-              <button 
-                onClick={() => {
-                  if(!newPaymentInput.trim()) return alert('Please enter details.');
-                  setSavedPayments(prev => ({ ...prev, [selectedPayment]: newPaymentInput.trim() }));
-                  setNewPaymentInput('');
-                  setShowPaymentSetupModal(false);
-                }}
-                style={{ padding: '14px', background: '#E91E63', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', transition: 'background 0.2s' }}
-              >
-                Save & Continue
+      {/* Address Selection & Fill-up Modal */}
+      {showAddressModal && (
+        <div 
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.65)', zIndex: 110000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+          onClick={() => setShowAddressModal(false)}
+        >
+          <div 
+            style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '440px', maxHeight: '90vh', overflowY: 'auto', padding: '24px', position: 'relative', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="las la-map-marker-alt" style={{ fontSize: '24px', color: '#E91E63' }}></i>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#111' }}>Select Delivery Address</h3>
+              </div>
+              <button onClick={() => setShowAddressModal(false)} style={{ background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#888', padding: '4px' }}>
+                <i className="las la-times"></i>
               </button>
             </div>
-            
-            {savedPayments[selectedPayment] && (
-              <div style={{ marginTop: '16px', padding: '12px', background: '#e8f5e9', borderRadius: '8px', fontSize: '13px', color: '#2e7d32', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <i className="las la-check-circle" style={{ fontSize: '18px' }}></i> 
-                <div>
-                  <strong>Saved:</strong> {savedPayments[selectedPayment]}
+
+            {/* Saved addresses list */}
+            {savedAddressesList && savedAddressesList.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#777', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                  Saved Addresses
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {savedAddressesList.map(addr => {
+                    const isSelected = selectedAddress && (selectedAddress.id === addr.id || (selectedAddress.phone === addr.phone && selectedAddress.addressLine === addr.addressLine));
+                    return (
+                      <div 
+                        key={addr.id || `${addr.phone}-${addr.recipient}`}
+                        onClick={() => handleSelectOrSaveAddress(addr)}
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: '8px',
+                          border: `1.5px solid ${isSelected ? '#E91E63' : '#eee'}`,
+                          background: isSelected ? '#FFF0F5' : '#FAFAFA',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0, paddingRight: '10px' }}>
+                          <div style={{ fontSize: '14px', fontWeight: 600, color: '#111' }}>
+                            {addr.recipient} <span style={{ fontSize: '12px', color: '#666', fontWeight: 400 }}>({addr.phone})</span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#666', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {addr.addressLine}, {addr.city}
+                          </div>
+                        </div>
+                        {isSelected ? (
+                          <i className="las la-check-circle" style={{ fontSize: '22px', color: '#E91E63' }}></i>
+                        ) : (
+                          <span style={{ fontSize: '12px', color: '#E91E63', fontWeight: 700, padding: '4px 8px', borderRadius: '4px', background: '#ffe4ef' }}>Use</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
+
+            {/* Fill up new address */}
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#777', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>
+                {savedAddressesList && savedAddressesList.length > 0 ? 'Or Fill Up New Address' : 'Enter Delivery Details'}
+              </div>
+              <form onSubmit={handleSaveNewAddress} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#444', marginBottom: '4px' }}>Recipient Name *</label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. Fishad Mohammad"
+                    value={addressFormData.recipient}
+                    onChange={e => setAddressFormData(prev => ({ ...prev, recipient: e.target.value }))}
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#444', marginBottom: '4px' }}>Mobile Phone Number *</label>
+                  <input 
+                    type="tel" 
+                    required
+                    placeholder="e.g. 01700000000"
+                    value={addressFormData.phone}
+                    onChange={e => setAddressFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#444', marginBottom: '4px' }}>City / District *</label>
+                  <select 
+                    value={addressFormData.city}
+                    onChange={e => setAddressFormData(prev => ({ ...prev, city: e.target.value }))}
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '14px', outline: 'none', boxSizing: 'border-box', background: '#fff' }}
+                  >
+                    <option value="Dhaka">Dhaka (Free Delivery)</option>
+                    <option value="Chattogram">Chattogram (৳130 Delivery)</option>
+                    <option value="Sylhet">Sylhet (৳130 Delivery)</option>
+                    <option value="Khulna">Khulna (৳130 Delivery)</option>
+                    <option value="Rajshahi">Rajshahi (৳130 Delivery)</option>
+                    <option value="Barisal">Barisal (৳130 Delivery)</option>
+                    <option value="Rangpur">Rangpur (৳130 Delivery)</option>
+                    <option value="Mymensingh">Mymensingh (৳130 Delivery)</option>
+                    <option value="Comilla">Comilla (৳130 Delivery)</option>
+                    <option value="Gazipur">Gazipur (৳130 Delivery)</option>
+                    <option value="Narayanganj">Narayanganj (৳130 Delivery)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#444', marginBottom: '4px' }}>Full Street Address *</label>
+                  <textarea 
+                    required
+                    rows={2}
+                    placeholder="House, Road, Area, Landmark"
+                    value={addressFormData.addressLine}
+                    onChange={e => setAddressFormData(prev => ({ ...prev, addressLine: e.target.value }))}
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'none' }}
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  style={{ padding: '14px', background: '#E91E63', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginTop: '4px' }}
+                >
+                  Save & Select This Address
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Direct bKash Merchant Payment Access Gateway */}
+      {showBkashGateway && (
+        <div 
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 120000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+          onClick={() => setShowBkashGateway(false)}
+        >
+          <div 
+            style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '420px', overflow: 'hidden', boxShadow: '0 25px 50px rgba(0,0,0,0.3)', position: 'relative' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ background: '#E2136E', padding: '20px', color: '#fff', position: 'relative' }}>
+              <button 
+                onClick={() => setShowBkashGateway(false)} 
+                style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <i className="las la-times" style={{ fontSize: '18px' }}></i>
+              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ background: '#fff', padding: '4px 8px', borderRadius: '8px', display: 'flex', alignItems: 'center' }}>
+                  <img src="https://sandbox.sslcommerz.com/gwprocess/v4/image/gw/bkash.png" alt="bKash" style={{ height: '24px', objectFit: 'contain' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '16px', fontWeight: 'bold' }}>OURGOODS MERCHANT</div>
+                  <div style={{ fontSize: '11px', opacity: 0.9 }}>Invoice: #{orderInvoiceId}</div>
+                </div>
+              </div>
+              
+              <div style={{ marginTop: '16px', background: 'rgba(0,0,0,0.15)', padding: '12px 16px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '11px', opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Amount to Pay</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>৳{finalOrderTotal.toLocaleString()}</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.25)', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600 }}>
+                  Includes 1.85% Cash Out (৳{cashOutCharge})
+                </div>
+              </div>
+            </div>
+
+            {/* Mode Switcher Tabs */}
+            <div style={{ display: 'flex', borderBottom: '1px solid #eee' }}>
+              <button 
+                onClick={() => { setBkashPayMethodType('gateway'); setBkashStep(1); }}
+                style={{ flex: 1, padding: '12px', background: bkashPayMethodType === 'gateway' ? '#fff' : '#f9f9f9', border: 'none', borderBottom: bkashPayMethodType === 'gateway' ? '3px solid #E2136E' : 'none', fontWeight: 600, fontSize: '13px', color: bkashPayMethodType === 'gateway' ? '#E2136E' : '#666', cursor: 'pointer' }}
+              >
+                <i className="las la-bolt" style={{ marginRight: '6px' }}></i> Direct bKash Gateway
+              </button>
+              <button 
+                onClick={() => setBkashPayMethodType('manual')}
+                style={{ flex: 1, padding: '12px', background: bkashPayMethodType === 'manual' ? '#fff' : '#f9f9f9', border: 'none', borderBottom: bkashPayMethodType === 'manual' ? '3px solid #E2136E' : 'none', fontWeight: 600, fontSize: '13px', color: bkashPayMethodType === 'manual' ? '#E2136E' : '#666', cursor: 'pointer' }}
+              >
+                <i className="las la-wallet" style={{ marginRight: '6px' }}></i> Merchant Pay / App
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '24px' }}>
+              {bkashPayMethodType === 'gateway' ? (
+                <div>
+                  {bkashStep === 1 && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#333', marginBottom: '8px' }}>
+                        Your bKash Account Number
+                      </label>
+                      <div style={{ position: 'relative', marginBottom: '16px' }}>
+                        <input 
+                          type="tel"
+                          placeholder="e.g. 017XXXXXXXX"
+                          maxLength={11}
+                          value={bkashNumber}
+                          onChange={e => setBkashNumber(e.target.value)}
+                          style={{ width: '100%', padding: '14px', borderRadius: '8px', border: '1.5px solid #E2136E', fontSize: '16px', fontWeight: 600, outline: 'none', boxSizing: 'border-box' }}
+                        />
+                        <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: '#999' }}>11 digits</span>
+                      </div>
+                      <p style={{ fontSize: '11px', color: '#777', lineHeight: '1.4', margin: '0 0 20px 0' }}>
+                        By clicking Proceed, a 6-digit verification code (OTP) will be verified for instant checkout.
+                      </p>
+                      <button 
+                        onClick={() => {
+                          if (!bkashNumber || bkashNumber.length < 11) return alert('Please enter valid 11-digit bKash number');
+                          setBkashStep(2);
+                        }}
+                        style={{ width: '100%', padding: '14px', background: '#E2136E', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}
+                      >
+                        PROCEED
+                      </button>
+                    </div>
+                  )}
+
+                  {bkashStep === 2 && (
+                    <div>
+                      <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#111' }}>Verification Code Sent</div>
+                        <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>Code simulated to {bkashNumber} (Default: 123456)</div>
+                      </div>
+                      <input 
+                        type="text"
+                        placeholder="123456"
+                        maxLength={6}
+                        value={bkashOtp}
+                        onChange={e => setBkashOtp(e.target.value)}
+                        style={{ width: '100%', padding: '14px', textAlign: 'center', letterSpacing: '4px', borderRadius: '8px', border: '1.5px solid #E2136E', fontSize: '18px', fontWeight: 'bold', outline: 'none', boxSizing: 'border-box', marginBottom: '16px' }}
+                      />
+                      <button 
+                        onClick={() => {
+                          if (!bkashOtp || bkashOtp.length < 4) return alert('Please enter verification code');
+                          setBkashStep(3);
+                        }}
+                        style={{ width: '100%', padding: '14px', background: '#E2136E', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}
+                      >
+                        CONFIRM CODE
+                      </button>
+                    </div>
+                  )}
+
+                  {bkashStep === 3 && (
+                    <div>
+                      <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#111' }}>Enter bKash PIN</div>
+                        <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>Amount: ৳{finalOrderTotal.toLocaleString()}</div>
+                      </div>
+                      <input 
+                        type="password"
+                        placeholder="•••••"
+                        maxLength={5}
+                        value={bkashPin}
+                        onChange={e => setBkashPin(e.target.value)}
+                        style={{ width: '100%', padding: '14px', textAlign: 'center', letterSpacing: '6px', borderRadius: '8px', border: '1.5px solid #E2136E', fontSize: '20px', fontWeight: 'bold', outline: 'none', boxSizing: 'border-box', marginBottom: '16px' }}
+                      />
+                      <button 
+                        onClick={() => {
+                          if (!bkashPin || bkashPin.length < 4) return alert('Please enter your 5-digit PIN');
+                          setBkashStep(4);
+                          setTimeout(() => {
+                            const genTrx = `BK${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+                            handleCompleteOrder({
+                              method: 'bKash Merchant',
+                              status: 'Paid',
+                              trxId: genTrx
+                            });
+                            setShowBkashGateway(false);
+                            setShowSkuModal(false);
+                          }, 1200);
+                        }}
+                        style={{ width: '100%', padding: '14px', background: '#E2136E', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}
+                      >
+                        CONFIRM PAYMENT
+                      </button>
+                    </div>
+                  )}
+
+                  {bkashStep === 4 && (
+                    <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                      <i className="las la-spinner la-spin" style={{ fontSize: '48px', color: '#E2136E' }}></i>
+                      <div style={{ fontSize: '16px', fontWeight: 'bold', marginTop: '16px', color: '#111' }}>Authorizing with bKash...</div>
+                      <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>Please do not close this window</div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Manual Merchant Payment */
+                <div>
+                  <div style={{ background: '#fdf2f7', border: '1px dashed #E2136E', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '12px', color: '#666' }}>Merchant Number:</span>
+                      <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#E2136E' }}>01712-345678</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                      <span style={{ fontSize: '12px', color: '#666' }}>Reference:</span>
+                      <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>OG{orderInvoiceId.slice(-4)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                      <span style={{ fontSize: '12px', color: '#666' }}>Amount with Cash Out:</span>
+                      <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#E2136E' }}>৳{finalOrderTotal.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <ol style={{ fontSize: '12px', color: '#555', paddingLeft: '18px', margin: '0 0 16px 0', lineHeight: '1.5' }}>
+                    <li>Dial <strong>*247#</strong> or open <strong>bKash App</strong></li>
+                    <li>Select <strong>Make Payment</strong></li>
+                    <li>Enter Merchant Number: <strong>01712-345678</strong></li>
+                    <li>Enter Amount: <strong>{finalOrderTotal}</strong></li>
+                    <li>Enter Reference: <strong>OG{orderInvoiceId.slice(-4)}</strong> & Counter: <strong>1</strong></li>
+                    <li>Enter your PIN to confirm payment</li>
+                  </ol>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#333', marginBottom: '6px' }}>
+                      Enter Transaction ID (TrxID) *
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. 9H72KL49X"
+                      value={bkashTrxId}
+                      onChange={e => setBkashTrxId(e.target.value.toUpperCase())}
+                      style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '14px', fontWeight: 600, outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <button 
+                    onClick={() => {
+                      if (!bkashTrxId.trim()) return alert('Please enter bKash Transaction ID (TrxID)');
+                      handleCompleteOrder({
+                        method: 'bKash Merchant (Manual)',
+                        status: 'Paid',
+                        trxId: bkashTrxId.trim()
+                      });
+                      setShowBkashGateway(false);
+                      setShowSkuModal(false);
+                    }}
+                    style={{ width: '100%', padding: '14px', background: '#E2136E', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}
+                  >
+                    Verify & Complete Order
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Direct Nagad Merchant Payment Access Gateway */}
+      {showNagadGateway && (
+        <div 
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 120000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+          onClick={() => setShowNagadGateway(false)}
+        >
+          <div 
+            style={{ background: '#fff', borderRadius: '16px', width: '100%', maxWidth: '420px', overflow: 'hidden', boxShadow: '0 25px 50px rgba(0,0,0,0.3)', position: 'relative' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ background: '#ED1C24', padding: '20px', color: '#fff', position: 'relative' }}>
+              <button 
+                onClick={() => setShowNagadGateway(false)} 
+                style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <i className="las la-times" style={{ fontSize: '18px' }}></i>
+              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ background: '#fff', padding: '4px 8px', borderRadius: '8px', display: 'flex', alignItems: 'center' }}>
+                  <img src="https://sandbox.sslcommerz.com/gwprocess/v4/image/gw/nagad.png" alt="Nagad" style={{ height: '24px', objectFit: 'contain' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '16px', fontWeight: 'bold' }}>OURGOODS MERCHANT</div>
+                  <div style={{ fontSize: '11px', opacity: 0.9 }}>Invoice: #{orderInvoiceId}</div>
+                </div>
+              </div>
+              
+              <div style={{ marginTop: '16px', background: 'rgba(0,0,0,0.15)', padding: '12px 16px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '11px', opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Amount to Pay</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>৳{finalOrderTotal.toLocaleString()}</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.25)', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600 }}>
+                  Includes 1.45% Cash Out (৳{cashOutCharge})
+                </div>
+              </div>
+            </div>
+
+            {/* Mode Switcher Tabs */}
+            <div style={{ display: 'flex', borderBottom: '1px solid #eee' }}>
+              <button 
+                onClick={() => { setNagadPayMethodType('gateway'); setNagadStep(1); }}
+                style={{ flex: 1, padding: '12px', background: nagadPayMethodType === 'gateway' ? '#fff' : '#f9f9f9', border: 'none', borderBottom: nagadPayMethodType === 'gateway' ? '3px solid #ED1C24' : 'none', fontWeight: 600, fontSize: '13px', color: nagadPayMethodType === 'gateway' ? '#ED1C24' : '#666', cursor: 'pointer' }}
+              >
+                <i className="las la-bolt" style={{ marginRight: '6px' }}></i> Direct Nagad Gateway
+              </button>
+              <button 
+                onClick={() => setNagadPayMethodType('manual')}
+                style={{ flex: 1, padding: '12px', background: nagadPayMethodType === 'manual' ? '#fff' : '#f9f9f9', border: 'none', borderBottom: nagadPayMethodType === 'manual' ? '3px solid #ED1C24' : 'none', fontWeight: 600, fontSize: '13px', color: nagadPayMethodType === 'manual' ? '#ED1C24' : '#666', cursor: 'pointer' }}
+              >
+                <i className="las la-wallet" style={{ marginRight: '6px' }}></i> Merchant Pay / App
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '24px' }}>
+              {nagadPayMethodType === 'gateway' ? (
+                <div>
+                  {nagadStep === 1 && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#333', marginBottom: '8px' }}>
+                        Your Nagad Account Number
+                      </label>
+                      <div style={{ position: 'relative', marginBottom: '16px' }}>
+                        <input 
+                          type="tel"
+                          placeholder="e.g. 017XXXXXXXX"
+                          maxLength={11}
+                          value={nagadNumber}
+                          onChange={e => setNagadNumber(e.target.value)}
+                          style={{ width: '100%', padding: '14px', borderRadius: '8px', border: '1.5px solid #ED1C24', fontSize: '16px', fontWeight: 600, outline: 'none', boxSizing: 'border-box' }}
+                        />
+                        <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: '#999' }}>11 digits</span>
+                      </div>
+                      <p style={{ fontSize: '11px', color: '#777', lineHeight: '1.4', margin: '0 0 20px 0' }}>
+                        By clicking Proceed, a 6-digit verification code (OTP) will be verified for instant checkout.
+                      </p>
+                      <button 
+                        onClick={() => {
+                          if (!nagadNumber || nagadNumber.length < 11) return alert('Please enter valid 11-digit Nagad number');
+                          setNagadStep(2);
+                        }}
+                        style={{ width: '100%', padding: '14px', background: '#ED1C24', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}
+                      >
+                        PROCEED
+                      </button>
+                    </div>
+                  )}
+
+                  {nagadStep === 2 && (
+                    <div>
+                      <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#111' }}>Verification Code Sent</div>
+                        <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>Code simulated to {nagadNumber} (Default: 123456)</div>
+                      </div>
+                      <input 
+                        type="text"
+                        placeholder="123456"
+                        maxLength={6}
+                        value={nagadOtp}
+                        onChange={e => setNagadOtp(e.target.value)}
+                        style={{ width: '100%', padding: '14px', textAlign: 'center', letterSpacing: '4px', borderRadius: '8px', border: '1.5px solid #ED1C24', fontSize: '18px', fontWeight: 'bold', outline: 'none', boxSizing: 'border-box', marginBottom: '16px' }}
+                      />
+                      <button 
+                        onClick={() => {
+                          if (!nagadOtp || nagadOtp.length < 4) return alert('Please enter verification code');
+                          setNagadStep(3);
+                        }}
+                        style={{ width: '100%', padding: '14px', background: '#ED1C24', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}
+                      >
+                        CONFIRM CODE
+                      </button>
+                    </div>
+                  )}
+
+                  {nagadStep === 3 && (
+                    <div>
+                      <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#111' }}>Enter Nagad PIN</div>
+                        <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>Amount: ৳{finalOrderTotal.toLocaleString()}</div>
+                      </div>
+                      <input 
+                        type="password"
+                        placeholder="••••"
+                        maxLength={4}
+                        value={nagadPin}
+                        onChange={e => setNagadPin(e.target.value)}
+                        style={{ width: '100%', padding: '14px', textAlign: 'center', letterSpacing: '6px', borderRadius: '8px', border: '1.5px solid #ED1C24', fontSize: '20px', fontWeight: 'bold', outline: 'none', boxSizing: 'border-box', marginBottom: '16px' }}
+                      />
+                      <button 
+                        onClick={() => {
+                          if (!nagadPin || nagadPin.length < 4) return alert('Please enter your 4-digit PIN');
+                          setNagadStep(4);
+                          setTimeout(() => {
+                            const genTrx = `NG${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+                            handleCompleteOrder({
+                              method: 'Nagad Merchant',
+                              status: 'Paid',
+                              trxId: genTrx
+                            });
+                            setShowNagadGateway(false);
+                            setShowSkuModal(false);
+                          }, 1200);
+                        }}
+                        style={{ width: '100%', padding: '14px', background: '#ED1C24', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}
+                      >
+                        CONFIRM PAYMENT
+                      </button>
+                    </div>
+                  )}
+
+                  {nagadStep === 4 && (
+                    <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                      <i className="las la-spinner la-spin" style={{ fontSize: '48px', color: '#ED1C24' }}></i>
+                      <div style={{ fontSize: '16px', fontWeight: 'bold', marginTop: '16px', color: '#111' }}>Authorizing with Nagad...</div>
+                      <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>Please do not close this window</div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Manual Merchant Payment */
+                <div>
+                  <div style={{ background: '#FFF5EE', border: '1px dashed #ED1C24', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '12px', color: '#666' }}>Merchant Number:</span>
+                      <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#ED1C24' }}>01712-345678</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                      <span style={{ fontSize: '12px', color: '#666' }}>Reference:</span>
+                      <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>OG{orderInvoiceId.slice(-4)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                      <span style={{ fontSize: '12px', color: '#666' }}>Amount with Cash Out:</span>
+                      <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#ED1C24' }}>৳{finalOrderTotal.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <ol style={{ fontSize: '12px', color: '#555', paddingLeft: '18px', margin: '0 0 16px 0', lineHeight: '1.5' }}>
+                    <li>Dial <strong>*167#</strong> or open <strong>Nagad App</strong></li>
+                    <li>Select <strong>Payment</strong></li>
+                    <li>Enter Merchant Number: <strong>01712-345678</strong></li>
+                    <li>Enter Amount: <strong>{finalOrderTotal}</strong></li>
+                    <li>Enter Reference: <strong>OG{orderInvoiceId.slice(-4)}</strong> & Counter: <strong>1</strong></li>
+                    <li>Enter your PIN to confirm payment</li>
+                  </ol>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#333', marginBottom: '6px' }}>
+                      Enter Transaction ID (TrxID) *
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. 7K92ML38"
+                      value={nagadTrxId}
+                      onChange={e => setNagadTrxId(e.target.value.toUpperCase())}
+                      style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '14px', fontWeight: 600, outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <button 
+                    onClick={() => {
+                      if (!nagadTrxId.trim()) return alert('Please enter Nagad Transaction ID (TrxID)');
+                      handleCompleteOrder({
+                        method: 'Nagad Merchant (Manual)',
+                        status: 'Paid',
+                        trxId: nagadTrxId.trim()
+                      });
+                      setShowNagadGateway(false);
+                      setShowSkuModal(false);
+                    }}
+                    style={{ width: '100%', padding: '14px', background: '#ED1C24', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}
+                  >
+                    Verify & Complete Order
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Order Success Receipt Modal */}
+      {showOrderSuccessModal && lastPlacedOrder && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 130000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '420px', padding: '30px 24px', textAlign: 'center', boxShadow: '0 25px 50px rgba(0,0,0,0.25)', position: 'relative' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#dcfce7', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '36px' }}>
+              <i className="las la-check"></i>
+            </div>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: 800, color: '#111' }}>
+              Order Placed Successfully!
+            </h3>
+            <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#666' }}>
+              Thank you for ordering with OURGOODS.
+            </p>
+
+            <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '16px', textAlign: 'left', marginBottom: '24px', border: '1px solid #edf2f7' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>Order ID:</span>
+                <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#0f172a' }}>{lastPlacedOrder.orderId}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>Payment Method:</span>
+                <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#0f172a' }}>{lastPlacedOrder.paymentMethod}</span>
+              </div>
+              {lastPlacedOrder.transactionId && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>Transaction ID:</span>
+                  <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#16a34a' }}>{lastPlacedOrder.transactionId}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>Deliver To:</span>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a', textAlign: 'right', maxWidth: '200px' }}>
+                  {lastPlacedOrder.shippingAddress?.recipient} ({lastPlacedOrder.shippingAddress?.phone})<br />
+                  {lastPlacedOrder.shippingAddress?.addressLine}, {lastPlacedOrder.shippingAddress?.city}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed #cbd5e1', paddingTop: '8px', marginTop: '8px' }}>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Total Paid:</span>
+                <span style={{ fontSize: '16px', fontWeight: 800, color: '#E91E63' }}>৳{lastPlacedOrder.totalAmount?.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                onClick={() => {
+                  setShowOrderSuccessModal(false);
+                  setShowSkuModal(false);
+                }}
+                style={{ flex: 1, padding: '12px', background: '#f1f5f9', color: '#334155', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Continue Shopping
+              </button>
+              <button 
+                onClick={() => {
+                  setShowOrderSuccessModal(false);
+                  setShowSkuModal(false);
+                  navigate('/profile');
+                }}
+                style={{ flex: 1, padding: '12px', background: '#E91E63', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                View in Orders
+              </button>
+            </div>
           </div>
         </div>
       )}

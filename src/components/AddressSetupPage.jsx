@@ -57,13 +57,16 @@ const AddressSetupPage = () => {
       updatedAddresses = updatedAddresses.map(a => ({ ...a, isDefault: false }));
     }
     
+    const savedItem = editingId ? { ...newAddress, id: editingId } : { ...newAddress, id: Date.now() };
     if (editingId) {
-      updatedAddresses = updatedAddresses.map(a => a.id === editingId ? { ...newAddress, id: editingId } : a);
+      updatedAddresses = updatedAddresses.map(a => a.id === editingId ? savedItem : a);
     } else {
-      updatedAddresses = [...updatedAddresses, { ...newAddress, id: Date.now() }];
+      updatedAddresses = [...updatedAddresses, savedItem];
     }
     
     setAddresses(updatedAddresses);
+    localStorage.setItem('userAddresses', JSON.stringify(updatedAddresses));
+    localStorage.setItem('selectedAddress', JSON.stringify(savedItem));
     setShowAddForm(false);
     setEditingId(null);
     setNewAddress({ name: 'Home', recipient: '', phone: '', addressLine: '', city: 'Dhaka', isDefault: false });
@@ -76,14 +79,25 @@ const AddressSetupPage = () => {
   };
 
   const handleDelete = (id) => {
-    setAddresses(addresses.filter(a => a.id !== id));
+    const remaining = addresses.filter(a => a.id !== id);
+    setAddresses(remaining);
+    localStorage.setItem('userAddresses', JSON.stringify(remaining));
   };
 
   const handleSetDefault = (id) => {
-    setAddresses(addresses.map(a => ({
+    const updated = addresses.map(a => ({
       ...a,
       isDefault: a.id === id
-    })));
+    }));
+    setAddresses(updated);
+    localStorage.setItem('userAddresses', JSON.stringify(updated));
+    const def = updated.find(a => a.id === id);
+    if (def) localStorage.setItem('selectedAddress', JSON.stringify(def));
+  };
+
+  const handleSelectAddress = (address) => {
+    localStorage.setItem('selectedAddress', JSON.stringify(address));
+    navigate(-1);
   };
 
   return (
@@ -146,17 +160,29 @@ const AddressSetupPage = () => {
                     {address.city}, Bangladesh
                   </div>
                   
-                  {!address.isDefault && (
-                    <div 
-                      onClick={() => handleSetDefault(address.id)}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '14px', flexWrap: 'wrap' }}>
+                    <button 
+                      onClick={() => handleSelectAddress(address)}
                       style={{ 
-                        display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '12px',
-                        color: 'var(--brand-pink)', fontSize: '13px', fontWeight: 600, cursor: 'pointer'
+                        background: 'var(--brand-pink)', color: '#fff', border: 'none', 
+                        padding: '6px 14px', borderRadius: '6px', fontSize: '13px', 
+                        fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
                       }}
                     >
-                      <i className="las la-check-circle" style={{ fontSize: '18px' }}></i> Set as Default
-                    </div>
-                  )}
+                      <i className="las la-check"></i> Deliver to this Address
+                    </button>
+                    {!address.isDefault && (
+                      <div 
+                        onClick={() => handleSetDefault(address.id)}
+                        style={{ 
+                          display: 'inline-flex', alignItems: 'center', gap: '6px',
+                          color: '#666', fontSize: '13px', fontWeight: 500, cursor: 'pointer'
+                        }}
+                      >
+                        <i className="las la-check-circle" style={{ fontSize: '16px' }}></i> Set as Default
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
